@@ -89,10 +89,15 @@
     <div id="login-screen">
         <div class="auth-box">
             <h2 style="color: #e74c3c; margin-top:0;">☁️ 절망의 탑 : 온라인</h2>
-            <p style="font-size: 13px; color: #aaa;">이메일과 비밀번호를 입력해 클라우드에 접속하세요.<br>(최초 접속 시 자동 가입됩니다)</p>
+            <p style="font-size: 13px; color: #aaa;">이메일과 비밀번호를 입력해 클라우드에 접속하세요.</p>
             <input type="email" id="auth-email" placeholder="이메일 (예: test@game.com)"><br>
             <input type="password" id="auth-pwd" placeholder="비밀번호 (6자리 이상)"><br>
-            <button class="epic" onclick="handleLogin()" style="width: 80%; padding: 12px; margin-top: 15px; font-weight:bold;">접속하기</button>
+            
+            <div style="display: flex; gap: 10px; width: 80%; margin: 15px auto 0 auto;">
+                <button class="epic" onclick="handleLogin()" style="flex: 1; padding: 12px; font-weight:bold;">로그인</button>
+                <button class="epic" onclick="handleSignUp()" style="flex: 1; padding: 12px; font-weight:bold; background-color: #2980b9; border-color: #3498db;">회원가입</button>
+            </div>
+            
             <p id="auth-msg" style="color: #ff4757; font-size: 12px; margin-top: 10px;"></p>
         </div>
     </div>
@@ -267,17 +272,52 @@
         if(email.length < 5 || pwd.length < 6) { msg.innerText = "이메일 형식과 비밀번호(6자리 이상)를 확인해주세요."; return; }
         
         currentUserEmail = email;
+        msg.style.color = "#ff4757";
         msg.innerText = "서버 연결 중...";
 
         if(isCloudMode) {
             firebase.auth().signInWithEmailAndPassword(email, pwd)
                 .then(userCredential => loadCloudData(userCredential.user.uid))
                 .catch(error => {
-                    if(error.code === 'auth/user-not-found') {
-                        firebase.auth().createUserWithEmailAndPassword(email, pwd)
-                            .then(() => showStartScreen())
-                            .catch(err => msg.innerText = err.message);
-                    } else { msg.innerText = error.message; }
+                    if (error.code === 'auth/invalid-credential') {
+                        msg.innerText = "가입되지 않은 이메일이거나 비밀번호가 틀렸습니다.";
+                    } else { 
+                        msg.innerText = error.message; 
+                    }
+                });
+        }
+    }
+
+    // 🔥 새로 추가된 회원가입 전용 함수
+    function handleSignUp() {
+        const email = document.getElementById("auth-email").value;
+        const pwd = document.getElementById("auth-pwd").value;
+        const msg = document.getElementById("auth-msg");
+        
+        if(email.length < 5 || pwd.length < 6) { 
+            msg.style.color = "#ff4757";
+            msg.innerText = "이메일 형식과 비밀번호(6자리 이상)를 확인해주세요."; 
+            return; 
+        }
+        
+        currentUserEmail = email;
+        msg.style.color = "#f1c40f";
+        msg.innerText = "계정 생성 중...";
+
+        if(isCloudMode) {
+            firebase.auth().createUserWithEmailAndPassword(email, pwd)
+                .then(() => {
+                    msg.style.color = "#2ecc71";
+                    msg.innerText = "회원가입 완료! 잠시 후 직업 선택 창으로 이동합니다.";
+                    setTimeout(() => showStartScreen(), 1500); // 1.5초 후 시작 화면으로
+                })
+                .catch(error => {
+                    msg.style.color = "#ff4757";
+                    if(error.code === 'auth/email-already-in-use') {
+                        msg.innerText = "이미 가입된 이메일입니다. [로그인] 버튼을 눌러주세요.";
+                    } else { 
+                        msg.innerText = error.message; 
+                    }
                 });
         }
     }
