@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>절망의 탑: 리마스터 (확장팩 적용)</title>
+    <title>절망의 탑: 얼티밋 에디션</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -25,70 +25,48 @@
         }
         
         #game-wrapper {
-            width: 1050px; 
+            width: 1080px; 
             max-width: 100%;
             background-color: #111; 
-            border: 4px solid #500; 
-            padding: 15px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
+            border: 4px solid #335; 
+            padding: 15px; box-shadow: 0 0 40px rgba(50, 50, 255, 0.2);
             position: relative; box-sizing: border-box;
         }
 
-        h1 { text-align: center; color: #e74c3c; border-bottom: 3px dashed #622; padding-bottom: 10px; margin: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; font-size: 24px;}
+        h1 { text-align: center; color: #3498db; border-bottom: 3px dashed #224; padding-bottom: 10px; margin: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; font-size: 24px;}
         
-        /* 팝업 오버레이 */
-        .overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.95); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 50;
-        }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 50; }
         #start-screen { z-index: 40; display: none; }
         
         .auth-box { background: #1a1a1a; padding: 30px; border: 4px solid #444; text-align: center; }
         .auth-box input { width: 80%; padding: 10px; margin: 10px 0; background: #000; border: 2px solid #555; color: #fff; font-family: inherit; font-size: 16px;}
-
         .job-btn { font-size: 16px; padding: 12px 20px; width: 280px; background-color: #2c3e50; border: 2px solid #34495e; color: white;}
         .job-btn:hover { background-color: #34495e; cursor: pointer;}
         .job-row { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; gap: 5px; }
 
-        /* 🔥 새로운 3단 분리 레이아웃 (반응형/고정 크기) */
-        .main-layout { display: grid; grid-template-columns: 270px 340px 390px; gap: 15px; }
+        .main-layout { display: grid; grid-template-columns: 270px 340px 410px; gap: 15px; }
 
-        /* 패널 공통 */
         .panel { background-color: #1a1a1a; border: 2px solid #333; padding: 12px; box-sizing: border-box;}
         .panel h3 { margin: 0 0 10px 0; color: #3498db; border-bottom: 2px solid #444; padding-bottom: 5px; font-size: 16px; text-shadow: 1px 1px 0 #000;}
         
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 14px; }
         .full-width { grid-column: span 2; }
         
-        /* 게이지 바 */
         .bar-container { width: 100%; height: 16px; background-color: #222; border: 2px solid #000; position: relative; margin-top: 2px; }
         .bar-fill { height: 100%; background-color: #e74c3c; width: 100%; transition: width 0.2s; }
         .mp-fill { background-color: #3498db; } .exp-fill { background-color: #f1c40f; }
         .bar-text { position: absolute; top: -2px; left: 0; width: 100%; text-align: center; font-size: 13px; color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;}
 
-        /* 아이템 및 로그 */
         .equipment { margin-top: 10px; padding-top: 10px; border-top: 2px dashed #444; font-size: 13px; color: #bdc3c7; line-height: 1.5;}
         #inventory-list { font-size: 13px; color: #f39c12; margin: 5px 0; height: 50px; overflow-y: auto; background: #000; padding: 5px; border: 1px solid #333;}
-        
         #log-window { height: 130px; background-color: #000; color: #ccc; padding: 10px; border: 2px solid #500; overflow-y: auto; font-size: 13px; line-height: 1.5; margin-top: 10px; box-shadow: inset 0 0 10px #000;}
         
-        /* 🔥 도트 2D 맵 스타일링 (픽셀 아트 최적화) */
         .map-title { text-align: center; color: #fff; background: #222; padding: 5px; margin: 0 0 10px 0; border: 2px solid #555; font-size: 15px;}
-        #map-container {
-            width: 330px; height: 330px; /* 11 x 11 그리드 (각 30px) */
-            position: relative; border: 4px solid #444; box-sizing: content-box;
-            background-size: 30px 30px; margin: 0 auto; overflow: hidden;
-            image-rendering: pixelated; /* 도트 그래픽 느낌 강화 */
-        }
+        #map-container { width: 330px; height: 330px; position: relative; border: 4px solid #444; box-sizing: content-box; background-size: 30px 30px; margin: 0 auto; overflow: hidden; image-rendering: pixelated; }
         .map-town { background-color: #1e3a1e; background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); }
         .map-dungeon { background-color: #111; background-image: linear-gradient(rgba(255,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,0,0,0.1) 1px, transparent 1px); }
         
-        .entity {
-            position: absolute; width: 30px; height: 30px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 20px; transition: top 0.15s, left 0.15s; user-select: none;
-            z-index: 10;
-        }
+        .entity { position: absolute; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; font-size: 20px; transition: top 0.1s, left 0.1s; user-select: none; z-index: 10; }
         .sprite-npc { filter: drop-shadow(0 0 4px #f1c40f); animation: float 2s infinite ease-in-out; }
         .sprite-monster { filter: drop-shadow(0 0 4px #e74c3c); animation: shake 1.5s infinite; }
         .player-entity { z-index: 20; filter: drop-shadow(0 0 6px #3498db); animation: bounce 0.4s infinite alternate;}
@@ -97,28 +75,20 @@
         @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-2px); } 100% { transform: translateY(0px); } }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1px); } 75% { transform: translateX(1px); } }
 
-        /* D-Pad 조이패드 */
         #dpad { display: grid; grid-template-columns: 50px 50px 50px; gap: 5px; justify-content: center; margin-top: 15px; }
         #dpad button { height: 40px; padding: 0; font-size: 18px; font-weight: bold; background: #333; border-radius: 5px;}
         #dpad button:active { background: #555; transform: scale(0.95);}
 
-        /* 메뉴 섹션들 */
         .menu-wrapper { display: flex; flex-direction: column; gap: 8px;}
         .menu-section { display: none; background: #151515; border: 2px solid #333; padding: 12px; }
         .active-actions { display: block !important; }
         .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
         
-        /* 확장된 상점 리스트 전용 */
-        .shop-list { max-height: 250px; overflow-y: auto; background: #080808; border: 1px solid #444; padding: 5px; margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .shop-list { max-height: 200px; overflow-y: auto; background: #080808; border: 1px solid #444; padding: 5px; margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
         .shop-item-row { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; padding: 8px; font-size: 12px; border: 1px solid #333; cursor:pointer;}
         .shop-item-row:hover { border-color: #f1c40f; }
 
-        /* 버튼 디자인 */
-        button {
-            background-color: #222; color: #fff; border: 2px solid #555; padding: 8px;
-            font-size: 14px; cursor: pointer; font-family: inherit;
-            box-shadow: 2px 2px 0px #000; transition: 0.1s;
-        }
+        button { background-color: #222; color: #fff; border: 2px solid #555; padding: 8px; font-size: 14px; cursor: pointer; font-family: inherit; box-shadow: 2px 2px 0px #000; transition: 0.1s; }
         button:hover { background-color: #333; border-color: #777;}
         button:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
         button:disabled { background-color: #111; color: #444; cursor: not-allowed; border-color: #222; box-shadow: none; transform: none;}
@@ -137,7 +107,6 @@
 <body>
 
 <div id="game-wrapper">
-    
     <div id="login-screen" class="overlay">
         <div class="auth-box">
             <h2 style="color: #e74c3c; margin-top:0;">☁️ 절망의 탑 : 온라인</h2>
@@ -194,15 +163,11 @@
 
         <div class="center-panel">
             <div class="map-title" id="map-title-display">🗺️ 마을 광장</div>
-            
-            <div id="map-container" class="map-town">
-            </div>
-            
+            <div id="map-container" class="map-town"></div>
             <div id="dpad">
                 <div></div><button onclick="movePlayer(0,-1)">▲</button><div></div>
                 <button onclick="movePlayer(-1,0)">◀</button><button onclick="movePlayer(0,1)">▼</button><button onclick="movePlayer(1,0)">▶</button>
             </div>
-            
             <div id="log-window"></div>
         </div>
 
@@ -212,7 +177,7 @@
                 <h3 style="color:#2ecc71; margin-top:0; text-align:center;">탐험 모드</h3>
                 <div style="text-align:center; color:#ccc; line-height:1.6; margin-top: 20px;">
                     <p style="font-size:13px;">키보드 방향키 또는 <br>W, A, S, D로 이동하세요.</p>
-                    <p style="color:#f1c40f; font-weight:bold; margin-top:10px;">건물이나 사람 주변으로 다가가면<br>메뉴가 자동으로 열립니다!</p>
+                    <p style="color:#f1c40f; font-weight:bold; margin-top:10px;">주변으로 다가가면<br>메뉴가 자동으로 열립니다!</p>
                 </div>
                 <div style="margin-top: 30px; display:flex; gap: 5px;">
                     <button onclick="backToCharSelect()" style="flex:1; background-color: #2980b9;">캐릭터 변경</button>
@@ -256,8 +221,7 @@
                     <button onclick="buyPotion()" style="flex:1;">🧪 포션 (50G)</button>
                     <button onclick="buyItem('scroll', 2000)" style="flex:1;">📜 파방 (2천G)</button>
                 </div>
-                <div class="shop-list" id="shop-items-container">
-                    </div>
+                <div class="shop-list" id="shop-items-container"></div>
                 <button onclick="hireMercenary()" style="width: 100%; margin-top: 10px;">🤝 정예 용병 고용 [매턴 공+50] (2000G)</button>
             </div>
 
@@ -277,11 +241,13 @@
             <div id="npc-actions" class="menu-section">
                 <h3 style="color:#27ae60; margin-top:0;">👴 촌장 (종합 관리)</h3>
                 <button class="npc-btn" onclick="document.getElementById('promote-options').style.display='block';" style="width:100%; margin-bottom:5px;">⭐ 전직소 (10/30/50레벨)</button>
-                <div id="promote-options" style="display: none; border: 1px dashed #27ae60; padding: 5px; margin-bottom:5px; background:#000;"><div id="job-choices" class="grid-menu"></div></div>
+                <div id="promote-options" style="display: none; border: 1px dashed #27ae60; padding: 5px; margin-bottom:5px; background:#000;">
+                    <div id="job-choices" class="grid-menu"></div>
+                    <button onclick="resetJobTier()" style="width:100%; margin-top:5px; background:#c0392b; font-size:12px;">🔄 직업 초기화 (1차 직업으로 복구)</button>
+                </div>
                 
                 <button onclick="drawPet()" class="gacha-btn" style="width:100%; margin-bottom:5px;">🐾 알 부화하기 (1000G)</button>
-                
-                <button onclick="document.getElementById('reinc-options').style.display='block';" style="width:100%; background:#8e44ad;">🔮 환생 및 영혼 강화</button>
+                <button onclick="document.getElementById('reinc-options').style.display='block';" style="width:100%; background:#8e44ad;">🔮 환생 및 영혼 관리</button>
                 <div id="reinc-options" style="display: none; border: 1px dashed #9b59b6; padding: 5px; margin-top:5px; background:#000;">
                     <button onclick="reincarnate()" style="width:100%; color:#f1c40f;">🌀 환생 (20층 이상)</button>
                     <div class="grid-menu" style="margin-top:5px;">
@@ -308,6 +274,23 @@
                 <h3 style="color:#e67e22; margin-top:0;">🏟️ 지하 투기장</h3>
                 <p style="font-size:13px; color:#aaa;">끝없이 몰려오는 적을 쓰러뜨리고 영혼석을 획득하세요!<br><span style="color:#f1c40f">(도망치기를 누르면 언제든 보상을 갖고 나갈 수 있습니다)</span></p>
                 <button onclick="startArena()" style="width:100%; height:50px; background:#d35400; border-color:#e67e22; font-weight:bold; margin-top: 10px;">무한 방어전 입장 (1,000G)</button>
+            </div>
+
+            <div id="fishing-actions" class="menu-section">
+                <h3 style="color:#00a8ff; margin-top:0;">🎣 신비한 낚시터</h3>
+                <p style="font-size:13px; color:#ccc;">MP를 소모해 낚시를 합니다. 희귀한 물고기나 아이템을 낚을 수 있습니다.</p>
+                <button onclick="doFishing()" style="width:100%; height:50px; background:#192a56; border-color:#00a8ff; font-weight:bold; font-size:16px;">찌 던지기 (-10 MP)</button>
+            </div>
+
+            <div id="blackmarket-actions" class="menu-section">
+                <h3 style="color:#8c7ae6; margin-top:0;">⛺ 떠돌이 암시장</h3>
+                <p style="font-size:12px; color:#aaa;">영혼석을 지불하고 귀중한 물건을 얻을 수 있습니다.</p>
+                <div class="grid-menu" style="margin-top: 10px;">
+                    <button onclick="buyFromBlackMarket('stone')" class="full-width" style="background:#2f3640;">강화석 5개 교환 (영혼석 1개)</button>
+                    <button onclick="buyFromBlackMarket('scroll')" class="full-width" style="background:#2f3640;">파방 주문서 2장 교환 (영혼석 1개)</button>
+                    <button onclick="buyFromBlackMarket('potion')" class="full-width" style="background:#2f3640;">최고급 포션 10개 (영혼석 1개)</button>
+                    <button onclick="buyFromBlackMarket('relic')" class="full-width" style="background:#4a235a; color:#f1c40f; border-color:#8e44ad;">고대 유물 뽑기 (영혼석 5개)</button>
+                </div>
             </div>
 
             <div id="post-combat-actions" class="menu-section">
@@ -365,7 +348,7 @@
             html += `<div class="job-row"><button class="job-btn" style="background:${sv?'#27ae60':'#2c3e50'};" onclick="selectJob('${j}')">${icons[i]} ${j} ${sv?'(이어하기)':'(새 시작)'}</button><button onclick="resetJob('${j}')" style="background:#c0392b;" ${sv?'':'disabled'}>삭제</button></div>`;
         });
         document.getElementById("job-select-container").innerHTML = html;
-        renderShop(); // 초기 상점 렌더링
+        renderShop(); 
     }
 
     function selectJob(j) {
@@ -400,7 +383,7 @@
     }
 
     // ==========================================
-    // 2. 확장된 게임 데이터 (3차 전직, 상점, 몬스터 확장)
+    // 2. 확장된 게임 데이터 (몬스터 대량 추가)
     // ==========================================
     let player = {}; let currentMonster = null; let currentInteractingEntity = null;
     let isDead = false; let baseWeaponAtk = 0; let baseArmorDef = 0;
@@ -439,19 +422,49 @@
         { type: '무기', name: '엑스칼리버', price: 150000, stat: 1000 }, { type: '방어구', name: '절대신의 흉갑', price: 150000, stat: 800 }
     ];
 
-    const monsterTraits = { "무특성":{text:""}, "맹독":{text:"[맹독]"}, "흡혈":{text:"[흡혈]"}, "단단함":{text:"[단단함]"}, "암살":{text:"[암살]"}, "재생":{text:"[재생]"}, "파멸":{text:"[파멸]"} };
+    // 🔥 신규 몬스터 특성 추가 (반사, 기민함)
+    const monsterTraits = { 
+        "무특성":{text:""}, "맹독":{text:"[맹독]"}, "흡혈":{text:"[흡혈]"}, "단단함":{text:"[단단함]"}, 
+        "암살":{text:"[암살]"}, "재생":{text:"[재생]"}, "파멸":{text:"[파멸]"}, 
+        "반사":{text:"[반사]"}, "기민함":{text:"[기민함]"} 
+    };
     
+    // 🔥 몬스터 종류 극대화 (기존 10종 -> 25종)
     const baseMonsters = [
-        { name: "고블린", hp: 100, atk: 25, def: 5, exp: 40, gold: 30, speed: 8, trait: "무특성" }, { name: "맹독 슬라임", hp: 120, atk: 20, def: 10, exp: 45, gold: 35, speed: 5, trait: "맹독" },
-        { name: "오크 전사", hp: 180, atk: 40, def: 15, exp: 70, gold: 50, speed: 12, trait: "무특성" }, { name: "뱀파이어 박쥐", hp: 150, atk: 45, def: 5, exp: 65, gold: 45, speed: 25, trait: "흡혈" },
-        { name: "단단한 골렘", hp: 250, atk: 35, def: 35, exp: 90, gold: 60, speed: 2, trait: "단단함" }, { name: "그림자 암살자", hp: 180, atk: 60, def: 10, exp: 100, gold: 70, speed: 35, trait: "암살" },
-        { name: "리자드맨", hp: 250, atk: 55, def: 25, exp: 100, gold: 70, speed: 15, trait: "재생" }, { name: "데스나이트", hp: 350, atk: 70, def: 40, exp: 150, gold: 120, speed: 20, trait: "무특성" },
-        { name: "서큐버스", hp: 280, atk: 75, def: 15, exp: 160, gold: 130, speed: 30, trait: "흡혈" }, { name: "포악한 오거", hp: 450, atk: 90, def: 30, exp: 200, gold: 160, speed: 10, trait: "단단함" }
+        { name: "슬라임", hp: 60, atk: 18, def: 2, exp: 30, gold: 20, speed: 5, trait: "무특성" },
+        { name: "독 슬라임", hp: 80, atk: 20, def: 5, exp: 40, gold: 30, speed: 6, trait: "맹독" },
+        { name: "고블린", hp: 100, atk: 25, def: 5, exp: 40, gold: 30, speed: 8, trait: "무특성" }, 
+        { name: "고블린 궁수", hp: 80, atk: 35, def: 2, exp: 45, gold: 35, speed: 15, trait: "기민함" },
+        { name: "해골 병사", hp: 120, atk: 30, def: 10, exp: 50, gold: 40, speed: 7, trait: "무특성" },
+        { name: "뱀파이어 박쥐", hp: 150, atk: 45, def: 5, exp: 65, gold: 45, speed: 25, trait: "흡혈" },
+        { name: "오크 전사", hp: 180, atk: 40, def: 15, exp: 70, gold: 50, speed: 12, trait: "무특성" }, 
+        { name: "미믹", hp: 200, atk: 50, def: 30, exp: 100, gold: 200, speed: 5, trait: "단단함" }, // 골드 많이줌
+        { name: "단단한 골렘", hp: 250, atk: 35, def: 35, exp: 90, gold: 60, speed: 2, trait: "단단함" }, 
+        { name: "그림자 암살자", hp: 180, atk: 60, def: 10, exp: 100, gold: 70, speed: 35, trait: "암살" },
+        { name: "사막 여우", hp: 160, atk: 45, def: 8, exp: 80, gold: 60, speed: 40, trait: "기민함" },
+        { name: "리자드맨", hp: 250, atk: 55, def: 25, exp: 100, gold: 70, speed: 15, trait: "재생" }, 
+        { name: "아이스 골렘", hp: 300, atk: 60, def: 40, exp: 120, gold: 90, speed: 5, trait: "단단함" },
+        { name: "파이어 엘리멘탈", hp: 220, atk: 80, def: 15, exp: 130, gold: 100, speed: 20, trait: "반사" },
+        { name: "데스나이트", hp: 350, atk: 70, def: 40, exp: 150, gold: 120, speed: 20, trait: "무특성" },
+        { name: "서큐버스", hp: 280, atk: 75, def: 15, exp: 160, gold: 130, speed: 30, trait: "흡혈" }, 
+        { name: "켈베로스", hp: 400, atk: 85, def: 20, exp: 180, gold: 140, speed: 28, trait: "재생" },
+        { name: "포악한 오거", hp: 450, atk: 90, def: 30, exp: 200, gold: 160, speed: 10, trait: "단단함" },
+        { name: "스펙터", hp: 300, atk: 100, def: 5, exp: 220, gold: 180, speed: 45, trait: "기민함" },
+        { name: "미노타우로스", hp: 600, atk: 120, def: 50, exp: 300, gold: 250, speed: 15, trait: "파멸" }
     ];
+
+    // 🔥 보스 몬스터 극대화 (기존 5종 -> 10종)
     const bossMonsters = [
-        { name: "💀 심연의 지배자", hp: 1000, atk: 120, def: 60, exp: 500, gold: 600, speed: 30, trait: "맹독" }, { name: "💀 피의 군주", hp: 900, atk: 140, def: 50, exp: 500, gold: 600, speed: 40, trait: "흡혈" },
-        { name: "💀 파멸의 거상", hp: 1500, atk: 100, def: 100, exp: 500, gold: 600, speed: 15, trait: "파멸" }, { name: "💀 타락한 영웅", hp: 1100, atk: 150, def: 70, exp: 600, gold: 700, speed: 50, trait: "암살" },
-        { name: "💀 무자비한 듀라한", hp: 2000, atk: 200, def: 150, exp: 800, gold: 1000, speed: 20, trait: "단단함" }
+        { name: "💀 거대 슬라임 킹", hp: 800, atk: 80, def: 20, exp: 400, gold: 400, speed: 10, trait: "재생" },
+        { name: "💀 피의 군주", hp: 900, atk: 140, def: 50, exp: 500, gold: 600, speed: 40, trait: "흡혈" },
+        { name: "💀 심연의 지배자", hp: 1000, atk: 120, def: 60, exp: 500, gold: 600, speed: 30, trait: "맹독" }, 
+        { name: "💀 고블린 킹", hp: 1200, atk: 110, def: 40, exp: 550, gold: 700, speed: 25, trait: "기민함" },
+        { name: "💀 파멸의 거상", hp: 1500, atk: 100, def: 100, exp: 600, gold: 600, speed: 15, trait: "파멸" }, 
+        { name: "💀 타락한 영웅", hp: 1100, atk: 150, def: 70, exp: 650, gold: 750, speed: 50, trait: "암살" },
+        { name: "💀 저주받은 마검사", hp: 1600, atk: 180, def: 80, exp: 800, gold: 900, speed: 45, trait: "반사" },
+        { name: "💀 무자비한 듀라한", hp: 2000, atk: 200, def: 150, exp: 900, gold: 1000, speed: 20, trait: "단단함" },
+        { name: "💀 헬 하운드 알파", hp: 2500, atk: 250, def: 100, exp: 1200, gold: 1300, speed: 60, trait: "흡혈" },
+        { name: "💀 고대 리치", hp: 3000, atk: 350, def: 120, exp: 2000, gold: 2000, speed: 35, trait: "파멸" }
     ];
 
     function startGame(j) {
@@ -464,7 +477,7 @@
     }
 
     function calcStats() {
-        let b = jobStats[player.baseJob]; let p = player.promoted ? jobStats[player.job] : null;
+        let b = jobStats[player.baseJob]; let p = (player.job !== player.baseJob) ? jobStats[player.job] : null;
         let r = player.relicLevel || 0;
         let rHp = b.hp + (player.level-1)*30 + (p?p.hpBonus:0) + player.absHp + player.soulHp + (r*100);
         let rMp = b.mp + (player.level-1)*15 + (p?p.mpBonus:0);
@@ -485,7 +498,7 @@
         equipmentDB.forEach(eq => {
             let icon = eq.type === '무기' ? '🗡️' : '🛡️';
             html += `<div class="shop-item-row" onclick="buyEquip('${eq.type}', '${eq.name}', ${eq.price}, ${eq.stat})">
-                        <span>${icon} ${eq.name} (공/방 +${eq.stat})</span>
+                        <span>${icon} ${eq.name} (+${eq.stat})</span>
                         <span style="color:#f1c40f;">${eq.price.toLocaleString()}G</span>
                      </div>`;
         });
@@ -493,7 +506,7 @@
     }
 
     // ==========================================
-    // 3. 2D 맵 코어 엔진 (수정 완료)
+    // 3. 2D 맵 코어 엔진
     // ==========================================
     const MAP_SIZE = 11;
     let mapEntities = [];
@@ -528,7 +541,6 @@
         pEl.innerText = pIcon; pEl.style.left = (mapPlayerPos.x * 30) + "px"; pEl.style.top = (mapPlayerPos.y * 30) + "px"; c.appendChild(pEl);
     }
 
-    // 🔥 오류 수정: 상호작용 창이 열려있어도 이동이 가능하게 변경!
     window.addEventListener("keydown", (e) => {
         if(isDead || activeMenuMode === 'combat' || activeMenuMode === 'post-combat') return;
         if(['ArrowUp', 'w', 'W'].includes(e.key)) { movePlayer(0, -1); e.preventDefault(); }
@@ -548,10 +560,9 @@
             let tile = mapEntities.find(e => e.x === nx && e.y === ny);
             if(tile) {
                 if(tile.isMonster) {
-                    currentInteractingEntity = tile; // 🔥 몬스터 정보 임시 저장
+                    currentInteractingEntity = tile; 
                     startCombat(tile.isBoss);
                 } else if(tile.isStairs) {
-                    // 🔥 오류 수정: 몬스터를 다 잡아야 포탈 이용 가능!
                     let mobsLeft = mapEntities.filter(e => e.isMonster).length;
                     if(mobsLeft > 0) {
                         log(`<span class='damage'>층을 넘어가려면 남은 몬스터(${mobsLeft}마리)를 모두 잡아야 합니다!</span>`);
@@ -577,15 +588,17 @@
     function loadTownMap() {
         document.getElementById("map-container").className = "map-town";
         document.getElementById("map-title-display").innerText = "🗺️ 평화로운 마을 광장";
-        // 🔥 신규: 투기장(arena) 엔티티 추가
+        // 🔥 신규: 낚시터(fishing)와 암시장(blackmarket) 추가
         mapEntities = [
             { x: 5, y: 1, icon: '🏰', menuId: 'tower-entrance' },
-            { x: 2, y: 4, icon: '🛏️', menuId: 'inn' },
-            { x: 8, y: 4, icon: '🏪', menuId: 'shop' },
+            { x: 2, y: 3, icon: '🛏️', menuId: 'inn' },
+            { x: 8, y: 3, icon: '🏪', menuId: 'shop' },
             { x: 2, y: 7, icon: '🔨', menuId: 'blacksmith' },
             { x: 8, y: 7, icon: '👴', menuId: 'npc' },
             { x: 5, y: 9, icon: '🌌', menuId: 'rift' },
-            { x: 8, y: 1, icon: '🏟️', menuId: 'arena' } 
+            { x: 9, y: 1, icon: '🏟️', menuId: 'arena' },
+            { x: 1, y: 9, icon: '🎣', menuId: 'fishing' },
+            { x: 9, y: 9, icon: '⛺', menuId: 'blackmarket' }
         ];
         mapPlayerPos = { x: 5, y: 5 }; enterMapMode(); checkNearbyEntities();
     }
@@ -627,27 +640,24 @@
         toggleMode("combat"); updateUI();
     }
 
-    // 🔥 신규: 투기장 시스템
     function startArena() {
         if (player.hp < player.maxHp) return log("<span class='damage'>체력이 가득 찬 상태에서만 도전할 수 있습니다.</span>");
-        if (player.gold < 1000) return log("투기장 입장료(1,000G)가 부족합니다.");
+        if (player.gold < 1000) return log("입장료(1,000G) 부족!");
         player.gold -= 1000;
         isArenaMode = true; arenaWave = 1;
         document.getElementById("map-container").className = "map-dungeon";
         document.getElementById("map-title-display").innerText = `🏟️ 마계의 투기장`;
-        log(`<hr><b><span style='color:#e67e22;'>지하 투기장의 굳게 닫힌 문이 열립니다...</span></b>`);
+        log(`<hr><b><span style='color:#e67e22;'>지하 투기장의 문이 열립니다...</span></b>`);
         
-        mapEntities = []; // 맵에 아무것도 안그림
-        mapPlayerPos = { x: 5, y: 5 }; drawMap();
-        
+        mapEntities = []; mapPlayerPos = { x: 5, y: 5 }; drawMap();
         setTimeout(() => startArenaCombat(), 800);
     }
 
     function startArenaCombat() {
         let t = baseMonsters[Math.floor(Math.random() * baseMonsters.length)];
-        let sm = Math.pow(1.15, arenaWave); // 웨이브마다 스탯 15% 복리 증가
+        let sm = Math.pow(1.15, arenaWave); 
         currentMonster = {
-            name: `[${arenaWave}W] 투기장 ` + t.name, trait: t.trait, 
+            name: `[${arenaWave}W] ` + t.name, trait: t.trait, 
             hp: Math.floor(t.hp * sm), maxHp: Math.floor(t.hp * sm), atk: Math.floor(t.atk * sm), def: Math.floor(t.def * sm),
             speed: Math.floor(t.speed * 1.05), exp: Math.floor(t.exp * sm * 1.5), gold: Math.floor(t.gold * sm * 1.5)
         };
@@ -659,10 +669,9 @@
         let now = Date.now();
         if(player.lastRaidTime && now - player.lastRaidTime < 300000) {
             let left = Math.ceil((300000 - (now - player.lastRaidTime))/1000);
-            return log(`<span class='damage'>아직 마룡이 부활하지 않았습니다. (${left}초 남음)</span>`);
+            return log(`<span class='damage'>마룡 부활 대기 중. (${left}초)</span>`);
         }
         player.lastRaidTime = now;
-
         isRaidMode = true; raidTurn = 10; totalRaidDmg = 0;
         document.getElementById("map-container").className = "map-dungeon";
         document.getElementById("map-title-display").innerText = `🌌 차원의 틈 (레이드)`;
@@ -695,7 +704,7 @@
     }
 
     // ==========================================
-    // 4. 스탯 및 전투 처리
+    // 4. 스탯 및 기능 처리 (직업 되돌리기 등)
     // ==========================================
     function changeFloor(dir) {
         if(!player.maxFloor) player.maxFloor = player.floor;
@@ -827,6 +836,17 @@
         }
     }
 
+    // 🔥 직업 초기화 기능 추가
+    function resetJobTier() {
+        if(player.job === player.baseJob) return log("<span class='damage'>이미 1차 직업 상태입니다.</span>");
+        if(confirm("정말로 1차 직업으로 초기화하시겠습니까? (레벨과 스탯은 유지되며 다시 승급할 수 있습니다.)")) {
+            player.job = player.baseJob;
+            player.promoted = false;
+            log("<b><span class='highlight'>직업이 1차로 초기화되었습니다. 다른 승급 트리를 선택할 수 있습니다.</span></b>");
+            calcStats(); updateUI(); renderJobs(); autoSave();
+        }
+    }
+
     function renderJobs() {
         let html = ""; let available = false;
         for(let j in jobStats) {
@@ -843,6 +863,61 @@
         player.job = j; player.promoted = true; 
         log(`<b><span class='highlight'>[${j}]</span></b>로 전직했습니다!`);
         calcStats(); player.hp = player.maxHp; player.mp = player.maxMp; updateUI(); renderJobs(); autoSave();
+    }
+
+    // 🔥 신규 컨텐츠: 낚시터 로직
+    function doFishing() {
+        if (player.mp < 10) return log("<span class='damage'>마나가 부족합니다. (10 필요)</span>");
+        player.mp -= 10;
+        log("🎣 찌를 던지고 기다립니다...");
+        
+        setTimeout(() => {
+            let rand = Math.random();
+            if (rand < 0.3) {
+                log("<span style='color:#aaa;'>빈 깡통을 낚았습니다. (효과 없음)</span>");
+            } else if (rand < 0.6) {
+                player.hp = Math.min(player.maxHp, player.hp + 50);
+                log("<span class='heal'>싱싱한 물고기를 낚아 먹었습니다! (HP +50)</span>");
+            } else if (rand < 0.85) {
+                player.gold += 300;
+                log("<b><span style='color:#f1c40f;'>비늘이 금빛인 잉어를 낚아 팔았습니다! (+300G)</span></b>");
+            } else if (rand < 0.98) {
+                player.inventory["강화석"] = (player.inventory["강화석"]||0) + 1;
+                log("<b><span class='highlight'>물고기 뱃속에서 강화석을 발견했습니다!</span></b>");
+            } else {
+                player.soulStones++;
+                log("<b><span class='epic'>전설의 심해어! 영혼석을 1개 얻었습니다!!</span></b>");
+            }
+            updateUI(); autoSave();
+        }, 1000);
+        updateUI();
+    }
+
+    // 🔥 신규 컨텐츠: 암시장 로직
+    function buyFromBlackMarket(item) {
+        if (item === 'stone') {
+            if (player.soulStones < 1) return log("영혼석이 부족합니다.");
+            player.soulStones--; player.inventory["강화석"] = (player.inventory["강화석"]||0) + 5;
+            log("강화석 5개를 얻었습니다.");
+        } else if (item === 'scroll') {
+            if (player.soulStones < 1) return log("영혼석이 부족합니다.");
+            player.soulStones--; player.scrolls += 2;
+            log("파방 주문서 2장을 얻었습니다.");
+        } else if (item === 'potion') {
+            if (player.soulStones < 1) return log("영혼석이 부족합니다.");
+            player.soulStones--; player.potions += 10;
+            log("포션 10개를 얻었습니다.");
+        } else if (item === 'relic') {
+            if (player.soulStones < 5) return log("영혼석이 부족합니다. (5개 필요)");
+            player.soulStones -= 5;
+            let boosts = ['hp', 'atk', 'def'];
+            let t = boosts[Math.floor(Math.random() * boosts.length)];
+            if(t === 'hp') { player.absHp += 100; log("<span class='epic'>고대 유물: 최대 체력이 영구적으로 100 증가합니다!</span>"); }
+            if(t === 'atk') { player.absAtk += 15; log("<span class='epic'>고대 유물: 공격력이 영구적으로 15 증가합니다!</span>"); }
+            if(t === 'def') { player.absDef += 10; log("<span class='epic'>고대 유물: 방어력이 영구적으로 10 증가합니다!</span>"); }
+            calcStats();
+        }
+        updateUI(); autoSave();
     }
 
     // ==========================================
@@ -867,7 +942,6 @@
     function doPlayerAction(type, next) {
         if (type === "run") {
             if (isRaidMode) return log("레이드 도주 불가!");
-            // 🔥 투기장 전용 무조건 도망 로직
             if (isArenaMode) {
                 log("<b><span style='color:#e67e22;'>투기장 전투를 중단하고 무사히 빠져나왔습니다.</span></b>");
                 isArenaMode = false; currentMonster = null; currentInteractingEntity = null;
@@ -899,14 +973,29 @@
             }
         }
         if (Math.random() < (player.comboRate/100)) { log(`<b><span class='epic'>🌪️ 연격 2배!</span></b>`); dmg *= 2; }
-        if (currentMonster.trait === "암살" && Math.random() < 0.15) { log(`적 회피!`); next(); return; }
+        
+        // 🔥 몬스터 방어 특성 처리
+        if (currentMonster.trait === "암살" || currentMonster.trait === "기민함") {
+            if(Math.random() < 0.2) { log(`적 회피!`); next(); return; }
+        }
         if (currentMonster.trait === "단단함") dmg = Math.floor(dmg * 0.8);
 
         log(`적에게 <span class='highlight'>${dmg}</span> 피해!`); currentMonster.hp -= dmg;
+        
+        // 🔥 반사 특성 처리
+        if (currentMonster.trait === "반사") {
+            let refDmg = Math.floor(dmg * 0.1);
+            player.hp -= refDmg;
+            log(`<span class='damage'>적의 가시 갑옷! (${refDmg} 반사 피해)</span>`);
+        }
+
         if (currentMonster.hp > 0 && player.hasMercenary) { let md = calcDamage(50, currentMonster.def); currentMonster.hp -= md; log(`<span class='heal'>용병 지원 (${md})</span>`); }
 
         if (isRaidMode) { totalRaidDmg += dmg; log(`<span style='color:#00ffff;'>누적: ${totalRaidDmg.toLocaleString()}</span>`); next(); return; }
-        if (currentMonster.hp <= 0) winCombat(); else next();
+        
+        if (player.hp <= 0) { player.hp = 0; gameOver(); }
+        else if (currentMonster.hp <= 0) winCombat(); 
+        else next();
     }
 
     function doEnemyAction(next) {
@@ -942,7 +1031,6 @@
         
         checkLevelUp(); 
         
-        // 🔥 투기장 연속 전투 로직
         if (isArenaMode) {
             arenaWave++;
             log(`<hr><b><span style='color:#e67e22;'>투기장 ${arenaWave}웨이브 몬스터 난입!</span></b>`);
@@ -954,7 +1042,6 @@
             return;
         }
 
-        // 🔥 정상 전투 종료 (맵에서 몬스터 삭제)
         if (currentInteractingEntity) {
             mapEntities = mapEntities.filter(e => e !== currentInteractingEntity);
             currentInteractingEntity = null;
