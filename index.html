@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>절망의 탑: 얼티밋 에디션 (유적 발굴 & UI 개선)</title>
+    <title>절망의 탑: 온라인 (PvP & 랭킹 업데이트)</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -85,7 +85,6 @@
 
         #log-window { height: 140px; background-color: #050508; color: #ccc; padding: 12px; border: 1px solid #334; border-radius: 8px; overflow-y: auto; font-size: 13px; line-height: 1.6; margin-top: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);}
         
-        /* 🔥 도트 2D 맵 스타일링 및 간격 보정 */
         .map-title { text-align: center; color: #fff; background: #223; padding: 8px; margin: 0 0 12px 0; border-radius: 8px; font-size: 15px; font-weight: bold; border: 1px solid #445;}
         #map-container { width: 330px; height: 330px; position: relative; border: 2px solid #445; border-radius: 8px; box-sizing: content-box; background-size: 30px 30px; margin: 0 auto; overflow: hidden; image-rendering: pixelated; box-shadow: 0 4px 10px rgba(0,0,0,0.5);}
         .map-town { background-color: #1e3a1e; background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); }
@@ -94,11 +93,11 @@
         .entity { position: absolute; width: 30px; height: 30px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 22px; transition: top 0.15s, left 0.15s; user-select: none; z-index: 10; }
         .player-entity { z-index: 25; filter: drop-shadow(0 0 6px #3498db); animation: bounce 0.4s infinite alternate;}
         
-        /* 🔥 신규: 네임택 (건물/NPC 이름표) */
-        .entity-name { position: absolute; bottom: -12px; font-size: 9px; color: #fff; background: rgba(0,0,0,0.75); padding: 2px 4px; border-radius: 3px; white-space: nowrap; pointer-events: none; border: 1px solid #334; font-family: 'NeoDunggeunmo'; }
-        
-        /* 🔥 신규: 타겟팅 된 물체 시각 효과 */
+        .entity-name { position: absolute; bottom: -12px; font-size: 9px; color: #fff; background: rgba(0,0,0,0.75); padding: 2px 4px; border-radius: 3px; white-space: nowrap; pointer-events: none; border: 1px solid #334; font-family: 'NeoDunggeunmo'; z-index: 15; }
         .targeted-entity { transform: scale(1.15); filter: drop-shadow(0 0 8px #2ecc71); z-index: 20; }
+
+        .interact-hint { position: absolute; top: -18px; font-size: 14px; animation: hintBounce 1s infinite alternate; z-index: 30; text-shadow: 0 0 5px #000; pointer-events: none;}
+        @keyframes hintBounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
 
         @keyframes bounce { from { transform: translateY(0px); } to { transform: translateY(-4px); } }
 
@@ -116,7 +115,6 @@
         .shop-item-row { display: flex; justify-content: space-between; align-items: center; background: #1a1a24; padding: 10px; font-size: 12px; border: 1px solid #334; border-radius: 6px; cursor:pointer; transition: all 0.1s;}
         .shop-item-row:hover { border-color: #f1c40f; transform: scale(1.02); }
 
-        /* 🔥 지하 유적 미니게임 그리드 */
         .ruin-cell { background: #3e2723; border: 2px solid #5d4037; border-radius: 6px; height: 45px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 22px; transition: all 0.2s; box-shadow: inset 0 0 8px rgba(0,0,0,0.5); }
         .ruin-cell:hover { background: #4e342e; transform: scale(1.05); }
         .ruin-cell.revealed { background: #1a1a24; border-color: #334; cursor: default; transform: none; box-shadow: none; }
@@ -134,6 +132,10 @@
         .awake-btn { background-color: #000; color: #ff0044; border: 1px solid #ff0044; box-shadow: 0 4px 0 #800022;}
         
         .highlight { color: #f1c40f; } .damage { color: #ff4757; } .heal { color: #2ecc71; } .epic { color: #9b59b6; }
+
+        /* PvP 랭킹 테이블 UI */
+        .ranking-item { display:flex; justify-content:space-between; align-items:center; padding:10px; background:#1a1a24; border:1px solid #334; border-radius:6px; margin-bottom:5px; font-size:13px; }
+        .ranking-item.me { border-color: #f1c40f; background:#2c2c00; }
     </style>
 </head>
 <body>
@@ -141,7 +143,7 @@
 <div id="game-wrapper">
     <div id="login-screen" class="overlay">
         <div class="auth-box">
-            <h2 style="color: #3498db; margin-top:0;">☁️ 절망의 탑 : 리마스터</h2>
+            <h2 style="color: #3498db; margin-top:0;">☁️ 절망의 탑 : 온라인</h2>
             <input type="email" id="auth-email" placeholder="이메일 (예: test@game.com)"><br>
             <input type="password" id="auth-pwd" placeholder="비밀번호 (6자리 이상)"><br>
             <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
@@ -157,7 +159,7 @@
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 10px;">
-        <h1>🏰 절망의 탑</h1>
+        <h1>🏰 절망의 탑: 온라인</h1>
         <span class="save-indicator" id="save-status" style="font-size:14px; color:#2ecc71; font-weight:bold;">💾 SAVED</span>
     </div>
 
@@ -179,8 +181,13 @@
                     <div class="full-width">HP <div class="bar-container"><div class="bar-fill" id="p-hp-bar"></div><div class="bar-text"><span id="p-hp">0</span> / <span id="p-maxhp">0</span></div></div></div>
                     <div class="full-width">MP <div class="bar-container"><div class="bar-fill mp-fill" id="p-mp-bar"></div><div class="bar-text"><span id="p-mp">0</span> / <span id="p-maxmp">0</span></div></div></div>
                     <div class="full-width">EXP <div class="bar-container"><div class="bar-fill exp-fill" id="p-exp-bar"></div><div class="bar-text"><span id="p-exp">0</span> / <span id="p-maxexp">0</span></div></div></div>
-                    <div style="margin-top:8px;">⚔️ 공격력: <span id="p-atk" class="highlight">0</span></div>
-                    <div style="margin-top:8px;">🛡️ 방어력: <span id="p-def" class="highlight">0</span></div>
+                    
+                    <div class="full-width" style="margin: 5px 0; padding: 5px; background: #2c0e0e; border: 1px solid #e74c3c; border-radius: 4px; text-align: center;">
+                        💥 전투력(CP): <span id="p-cp" class="highlight" style="font-size:16px; font-weight:bold;">0</span>
+                    </div>
+
+                    <div>⚔️ 공격력: <span id="p-atk" class="highlight">0</span></div>
+                    <div>🛡️ 방어력: <span id="p-def" class="highlight">0</span></div>
                     <div>⚡ 행동 속도: <span id="p-speed">0</span></div>
                     <div>🌪️ 연속 타격: <span id="p-combo">0</span>%</div>
                     <div>🎯 치명 확률: <span id="p-crit">0</span>%</div>
@@ -228,9 +235,31 @@
                     </div>
 
                     <div style="margin-top: 15px; display:flex; gap: 8px;">
-                        <button class="skill-btn" onclick="backToCharSelect()" style="flex:1;">캐릭터 변경</button>
-                        <button class="tower-btn" onclick="logout()" style="flex:1;">로그아웃</button>
+                        <button class="skill-btn" onclick="backToCharSelect()" style="flex:1; height:45px;">캐릭터 변경</button>
+                        <button class="tower-btn" onclick="logout()" style="flex:1; height:45px;">로그아웃</button>
                     </div>
+                </div>
+
+                <div id="ranking-actions" class="menu-section">
+                    <h3 style="color:#f1c40f; margin-top:0;">🏆 명예의 전당 (서버 랭킹)</h3>
+                    <p style="font-size:12px; color:#aaa;">서버에 기록된 상위 10명의 모험가들입니다.</p>
+                    <button onclick="loadRankings()" class="system-btn" style="width:100%; margin-bottom:10px;">🔄 랭킹 갱신</button>
+                    <div id="ranking-list" style="background:#0a0a0f; border:1px solid #334; border-radius:6px; min-height:220px; padding:5px; display:flex; flex-direction:column; overflow-y:auto;">
+                        불러오는 중...
+                    </div>
+                </div>
+
+                <div id="pvp-actions" class="menu-section">
+                    <h3 style="color:#e74c3c; margin-top:0;">⚔️ 피의 결투장</h3>
+                    <p style="font-size:13px; color:#aaa; line-height:1.5;">랭킹에 등록된 다른 유저와 비동기 결투를 벌입니다.<br><span class="highlight">승리 시 대량의 명예(골드/경험치)를 얻습니다. 패배 패널티는 없습니다.</span></p>
+                    <button onclick="startPvP()" style="width:100%; height:60px; background:#7b241c; border-color:#922b21; font-weight:bold; font-size:16px; margin-top:10px; box-shadow:0 4px 0 #4a1310;">결투 상대 찾기</button>
+                </div>
+
+                <div id="greenhouse-actions" class="menu-section">
+                    <h3 style="color:#2ecc71; margin-top:0;">🌱 신비한 마력 온실</h3>
+                    <p style="font-size:12px; color:#aaa; line-height:1.5;">탑 몬스터가 흘린 '미확인 씨앗'을 심어 재배합니다.<br><span class="highlight">현실 시간 1분 소요 (영구 스탯 보너스 획득)</span></p>
+                    <div style="margin-bottom: 10px; font-size:13px;">보유 중인 씨앗: <span id="ui-seeds" class="highlight">0</span>개</div>
+                    <div style="display:flex; flex-direction:column; gap:8px;" id="greenhouse-pots"></div>
                 </div>
 
                 <div id="museum-actions" class="menu-section">
@@ -242,13 +271,6 @@
                         <p style="margin:5px 0 0 0; color:#2ecc71; font-weight:bold;">스탯 증폭 보너스: +<span id="dex-bonus">0</span>%</p>
                     </div>
                     <div class="shop-list" id="dex-list-container" style="max-height:200px;"></div>
-                </div>
-
-                <div id="greenhouse-actions" class="menu-section">
-                    <h3 style="color:#2ecc71; margin-top:0;">🌱 신비한 마력 온실</h3>
-                    <p style="font-size:12px; color:#aaa; line-height:1.5;">탑 몬스터가 흘린 '미확인 씨앗'을 심어 재배합니다.<br><span class="highlight">현실 시간 1분 소요 (영구 스탯 보너스 획득)</span></p>
-                    <div style="margin-bottom: 10px; font-size:13px;">보유 중인 씨앗: <span id="ui-seeds" class="highlight">0</span>개</div>
-                    <div style="display:flex; flex-direction:column; gap:8px;" id="greenhouse-pots"></div>
                 </div>
 
                 <div id="tower-entrance-actions" class="menu-section">
@@ -367,13 +389,12 @@
                     <p style="font-size:12px; color:#aaa; line-height:1.5;">탐사 키트를 구매해 흙을 파내어 숨겨진 보물을 찾으세요.<br>(내구도: 5회)</p>
                     <button onclick="buyExplorationKit()" id="btn-ruins-buy" style="width:100%; height:45px; margin-bottom:10px; background:#d35400; border-color:#873600; box-shadow:0 4px 0 #873600; font-weight:bold;">탐사 키트 구매 (1,000G)</button>
                     <div id="ruins-msg" style="text-align:center; color:#f1c40f; font-size:13px; margin-bottom:5px;">탐사 키트를 구매해주세요.</div>
-                    <div id="ruins-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:5px;">
-                        </div>
+                    <div id="ruins-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:5px;"></div>
                 </div>
 
                 <div id="post-combat-actions" class="menu-section">
-                    <h2 style="color:#e74c3c; text-align:center;">💀 사망했습니다</h2>
-                    <button onclick="revive()" class="awake-btn" style="width:100%; height:55px; font-size:15px;">✨ 마을에서 부활 (골드 10% 잃음)</button>
+                    <h2 style="color:#e74c3c; text-align:center;">💀 게임 오버</h2>
+                    <button onclick="revive()" class="awake-btn" style="width:100%; height:55px; font-size:15px;">✨ 마을에서 부활 (골드 10% 감소)</button>
                 </div>
             </div>
 
@@ -404,7 +425,7 @@
     // 1. 서버 연동 및 초기 설정
     // ==========================================
     const firebaseConfig = { apiKey: "AIzaSyCgULo_Mfwn6K4v-AxeC3r7p8ucwwPJd0Q", authDomain: "myrpg-9b043.firebaseapp.com", projectId: "myrpg-9b043", storageBucket: "myrpg-9b043.firebasestorage.app", messagingSenderId: "907651957003", appId: "1:907651957003:web:3b865807c72f07e3e0e20e" };
-    let isCloudMode = false; let currentUserEmail = ""; let autoSaveTimer = null; let cloudSaves = {}; let greenhouseInterval = null;
+    let isCloudMode = false; let autoSaveTimer = null; let cloudSaves = {}; let greenhouseInterval = null;
     try { firebase.initializeApp(firebaseConfig); isCloudMode = true; } catch(e) { console.log(e); }
 
     function handleLogin() {
@@ -441,7 +462,7 @@
             html += `<div class="job-row"><button class="job-btn" style="background:${sv?'#1e8449':'#2c3e50'};" onclick="selectJob('${j}')">${icons[i]} ${j} ${sv?'(이어하기)':'(새 시작)'}</button><button onclick="resetJob('${j}')" style="background:#c0392b; box-shadow:0 4px 0 #7b241c;" ${sv?'':'disabled'}>삭제</button></div>`;
         });
         document.getElementById("job-select-container").innerHTML = html;
-        renderShop(); renderRuinsGrid(true); // 빈 유적 그리드 생성
+        renderShop(); renderRuinsGrid(true); 
     }
 
     function selectJob(j) {
@@ -462,18 +483,30 @@
     function resumeGame(j) {
         document.getElementById("start-screen").style.display = "none"; document.getElementById("login-screen").style.display = "none";
         if(!player.skill) player.skill = jobStats[player.baseJob].skill; if(!player.maxFloor) player.maxFloor = player.floor;
-        isDead = false; isRaidMode = false; isArenaMode = false; currentMonster = null; document.querySelectorAll("button").forEach(b => b.disabled = false);
+        isDead = false; isRaidMode = false; isArenaMode = false; isPvPMode = false; currentMonster = null; document.querySelectorAll("button").forEach(b => b.disabled = false);
         calcStats(); updateUI(); log(`<span class='epic'>☁️ [${j}] 동기화 완료!</span>`); loadTownMap(); startGlobalTimer();
     }
 
     function autoSave() {
-        if(isDead || !player.baseJob || isRaidMode || isArenaMode || ruinsState.active) return; 
+        if(isDead || !player.baseJob || isRaidMode || isArenaMode || ruinsState.active || isPvPMode) return; 
         clearTimeout(autoSaveTimer);
         autoSaveTimer = setTimeout(() => {
             cloudSaves[player.baseJob] = { player: player, baseW: baseWeaponAtk, baseA: baseArmorDef }; 
-            if(isCloudMode) firebase.firestore().collection("rpg_saves").doc(firebase.auth().currentUser.uid).set(cloudSaves);
+            
+            if(isCloudMode && firebase.auth().currentUser) {
+                let u = firebase.auth().currentUser;
+                let nick = u.email.split('@')[0];
+                // 유저 개인 세이브 데이터 
+                firebase.firestore().collection("rpg_saves").doc(u.uid).set(cloudSaves);
+                // 실시간 랭킹(Leaderboard)용 데이터
+                firebase.firestore().collection("leaderboard").doc(u.uid + "_" + player.baseJob).set({
+                    nickname: nick, job: player.job, level: player.level, maxFloor: player.maxFloor,
+                    cp: player.cp, hp: player.maxHp, atk: player.atk, def: player.def, speed: player.speed,
+                    timestamp: Date.now()
+                });
+            }
             const i = document.getElementById("save-status"); i.style.opacity = 1; setTimeout(() => i.style.opacity = 0, 1500);
-        }, 1000);
+        }, 1500);
     }
 
     function startGlobalTimer() {
@@ -492,6 +525,7 @@
     let isDead = false; let baseWeaponAtk = 0; let baseArmorDef = 0;
     let isRaidMode = false; let raidTurn = 0; let totalRaidDmg = 0;
     let isArenaMode = false; let arenaWave = 1;
+    let isPvPMode = false;
 
     const jobStats = {
         '전사':   { hp: 150, mp: 40, atk: 20, def: 10, crit: 10, evade: 5, speed: 10, combo: 0, skill: "대지가르기", skillCost: 15, reqJob: null, reqLvl: 1 },
@@ -538,8 +572,8 @@
     ];
 
     function startGame(j) {
-        player = { baseJob: j, job: j, promoted: false, isAwakened: false, relicLevel: 0, level: 1, exp: 0, maxExp: 50, gold: 500, potions: 5, scrolls: 0, hp: 0, maxHp: 0, mp: 0, maxMp: 0, baseAtk: 0, baseDef: 0, baseCrit: jobStats[j].crit, baseEvade: jobStats[j].evade, atk: 0, def: 0, critRate: 0, evadeRate: 0, speed: 0, comboRate: 0, skill: jobStats[j].skill, skillCost: jobStats[j].skillCost, weapon: "맨주먹", weaponLevel: 0, armor: "평상복", inventory: { "강화석": 0, "미확인 씨앗": 0 }, cards: {}, quests: { killed: 0 }, pet: null, hasMercenary: false, floor: 1, maxFloor: 1, reincarnation: 0, soulStones: 0, absHp: 0, absAtk: 0, absDef: 0, soulHp: 0, soulAtk: 0, soulDef: 0, lastRaidTime: 0, plants: [{state:'empty',time:0},{state:'empty',time:0},{state:'empty',time:0}] };
-        baseWeaponAtk = 0; baseArmorDef = 0; isDead = false; isRaidMode = false; isArenaMode = false;
+        player = { baseJob: j, job: j, promoted: false, isAwakened: false, relicLevel: 0, level: 1, exp: 0, maxExp: 50, gold: 500, potions: 5, scrolls: 0, hp: 0, maxHp: 0, mp: 0, maxMp: 0, baseAtk: 0, baseDef: 0, baseCrit: jobStats[j].crit, baseEvade: jobStats[j].evade, atk: 0, def: 0, critRate: 0, evadeRate: 0, speed: 0, comboRate: 0, skill: jobStats[j].skill, skillCost: jobStats[j].skillCost, weapon: "맨주먹", weaponLevel: 0, armor: "평상복", inventory: { "강화석": 0, "미확인 씨앗": 0 }, cards: {}, quests: { killed: 0 }, pet: null, hasMercenary: false, floor: 1, maxFloor: 1, reincarnation: 0, soulStones: 0, absHp: 0, absAtk: 0, absDef: 0, soulHp: 0, soulAtk: 0, soulDef: 0, cp: 0, lastRaidTime: 0, plants: [{state:'empty',time:0},{state:'empty',time:0},{state:'empty',time:0}] };
+        baseWeaponAtk = 0; baseArmorDef = 0; isDead = false; isRaidMode = false; isArenaMode = false; isPvPMode = false;
         calcStats(); player.hp = player.maxHp; player.mp = player.maxMp;
         document.getElementById("start-screen").style.display = "none";
         log(`<span class="highlight">[${j}]</span> 지옥의 탑 환영합니다.`);
@@ -557,6 +591,13 @@
         player.baseAtk = Math.floor(rAtk * rm * am * dexMult); player.baseDef = Math.floor(rDef * rm * am * dexMult);
         player.baseCrit = b.crit + (p?p.critBonus:0) + (r*0.5); player.baseEvade = b.evade + (p?p.evadeBonus:0) + (r*0.2);
         player.speed = b.speed + (player.level-1)*1 + (p?p.speedBonus:0) + (r*2); player.comboRate = (b.combo + (p?p.comboBonus:0) + (r*0.5)).toFixed(1);
+        
+        // 🔥 전투력(CP) 계산
+        let finalAtk = player.baseAtk + baseWeaponAtk + (player.weaponLevel * 10) + (player.pet ? player.pet.atk : 0);
+        let finalDef = player.baseDef + baseArmorDef + (player.pet ? player.pet.def : 0);
+        let finalCrit = player.baseCrit + (player.pet ? player.pet.crit : 0);
+        let finalEvade = player.baseEvade + (player.pet ? player.pet.evade : 0);
+        player.cp = Math.floor(player.maxHp * 0.5 + finalAtk * 5 + finalDef * 5 + player.speed * 2 + finalCrit * 10 + finalEvade * 10);
     }
 
     function log(msg) { const lw = document.getElementById("log-window"); lw.innerHTML += msg + "<br>"; lw.scrollTop = lw.scrollHeight; }
@@ -573,12 +614,9 @@
     }
 
     // ==========================================
-    // 3. 2D 맵 코어 엔진 및 간격 재배치
+    // 3. 2D 맵 코어 엔진
     // ==========================================
-    const MAP_SIZE = 11;
-    let mapEntities = [];
-    let mapPlayerPos = { x: 5, y: 5 };
-    let activeMenuMode = 'map'; 
+    const MAP_SIZE = 11; let mapEntities = []; let mapPlayerPos = { x: 5, y: 5 }; let activeMenuMode = 'map'; 
 
     function enterMapMode() {
         toggleMode('map'); document.getElementById('promote-options').style.display = 'none'; document.getElementById('reinc-options').style.display = 'none';
@@ -590,7 +628,7 @@
         document.querySelectorAll('.menu-section').forEach(el => el.classList.remove('active-actions'));
         if(document.getElementById(mode + "-actions")) document.getElementById(mode + "-actions").classList.add("active-actions");
         if(mode === 'rift') checkRaidCooldown(); if(mode === 'npc') renderJobs(); if(mode === 'museum') renderDex(); if(mode === 'greenhouse') renderGreenhouse();
-        if(mode === 'ruins') renderRuinsGrid(false); // 미니게임 렌더링
+        if(mode === 'ruins') renderRuinsGrid(false); if(mode === 'ranking') loadRankings();
     }
 
     function drawMap() {
@@ -599,18 +637,12 @@
         if(activeMenuMode === 'map') nearby = mapEntities.find(e => Math.abs(e.x - mapPlayerPos.x) <= 1 && Math.abs(e.y - mapPlayerPos.y) <= 1 && e.menuId);
 
         mapEntities.forEach(ent => {
-            let el = document.createElement("div"); 
-            el.className = `entity ${ent.spriteClass || 'sprite-npc'}`; 
-            if(nearby === ent) el.classList.add("targeted-entity"); // 🔥 타겟팅 효과
-            el.innerText = ent.icon;
-            el.style.left = (ent.x * 30) + "px"; el.style.top = (ent.y * 30) + "px"; 
+            let el = document.createElement("div"); el.className = `entity ${ent.spriteClass || 'sprite-npc'}`; 
+            if(nearby === ent) el.classList.add("targeted-entity"); 
+            el.innerText = ent.icon; el.style.left = (ent.x * 30) + "px"; el.style.top = (ent.y * 30) + "px"; 
             
-            if(nearby === ent && activeMenuMode === 'map') {
-                let hint = document.createElement("div"); hint.className = "interact-hint"; hint.innerText = "💬"; el.appendChild(hint);
-            }
-            if(ent.name) {
-                let nTag = document.createElement("div"); nTag.className = "entity-name"; nTag.innerText = ent.name; el.appendChild(nTag);
-            }
+            if(nearby === ent && activeMenuMode === 'map') { let hint = document.createElement("div"); hint.className = "interact-hint"; hint.innerText = "💬"; el.appendChild(hint); }
+            if(ent.name) { let nTag = document.createElement("div"); nTag.className = "entity-name"; nTag.innerText = ent.name; el.appendChild(nTag); }
             c.appendChild(el);
         });
         
@@ -633,15 +665,12 @@
         if(nx >= 0 && nx < MAP_SIZE && ny >= 0 && ny < MAP_SIZE) {
             mapPlayerPos.x = nx; mapPlayerPos.y = ny; 
             checkNearbyEntities(); drawMap(); 
-            
             let tile = mapEntities.find(e => e.x === nx && e.y === ny);
             if(tile) {
-                if(tile.isMonster) {
-                    currentInteractingEntity = tile; startCombat(tile.isBoss);
-                } else if(tile.isStairs) {
+                if(tile.isMonster) { currentInteractingEntity = tile; startCombat(tile.isBoss); } 
+                else if(tile.isStairs) {
                     let mobsLeft = mapEntities.filter(e => e.isMonster).length;
-                    if(mobsLeft > 0) { log(`<span class='damage'>층을 넘어가려면 남은 몬스터(${mobsLeft}마리)를 모두 잡아야 합니다!</span>`); } 
-                    else { nextFloor(); }
+                    if(mobsLeft > 0) { log(`<span class='damage'>층을 넘어가려면 남은 몬스터(${mobsLeft}마리)를 모두 잡아야 합니다!</span>`); } else { nextFloor(); }
                 }
             }
         }
@@ -654,18 +683,19 @@
         else if (!nearby && activeMenuMode !== 'map' && activeMenuMode !== 'tower-entrance') { enterMapMode(); }
     }
 
-    // 🔥 맵 타일 겹치지 않게 완벽 분산 배치 & 네임택 적용
     function loadTownMap() {
         document.getElementById("map-container").className = "map-town";
         document.getElementById("map-title-display").innerText = "🗺️ 평화로운 마을 광장";
         mapEntities = [
-            { x: 5, y: 0, icon: '🏰', menuId: 'tower-entrance', name: '절망의탑' },
-            { x: 1, y: 2, icon: '🛏️', menuId: 'inn', name: '여관' },
-            { x: 9, y: 2, icon: '🏪', menuId: 'shop', name: '상점' },
+            { x: 5, y: 1, icon: '🏰', menuId: 'tower-entrance', name: '절망의탑' },
+            { x: 1, y: 1, icon: '🏆', menuId: 'ranking', name: '명예의전당' }, // 🔥 랭킹 추가
+            { x: 9, y: 1, icon: '⚔️', menuId: 'pvp', name: '결투장' }, // 🔥 PvP 결투장 추가
+            { x: 1, y: 3, icon: '🛏️', menuId: 'inn', name: '여관' },
+            { x: 9, y: 3, icon: '🏪', menuId: 'shop', name: '상점' },
             { x: 3, y: 3, icon: '🌌', menuId: 'rift', name: '차원의틈' },
             { x: 7, y: 3, icon: '🏟️', menuId: 'arena', name: '투기장' },
-            { x: 1, y: 5, icon: '🔨', menuId: 'blacksmith', name: '대장간' },
-            { x: 9, y: 5, icon: '👴', menuId: 'npc', name: '촌장' },
+            { x: 1, y: 6, icon: '🔨', menuId: 'blacksmith', name: '대장간' },
+            { x: 9, y: 6, icon: '👴', menuId: 'npc', name: '촌장' },
             { x: 3, y: 7, icon: '🎣', menuId: 'fishing', name: '낚시터' },
             { x: 7, y: 7, icon: '⛺', menuId: 'blackmarket', name: '암시장' },
             { x: 1, y: 8, icon: '🌱', menuId: 'greenhouse', name: '온실' },
@@ -677,10 +707,8 @@
 
     function enterTower() {
         if (isDead) return;
-        isRaidMode = false; isArenaMode = false;
-        document.getElementById("map-container").className = "map-dungeon";
-        document.getElementById("map-title-display").innerText = `🏰 절망의 탑 [${player.floor}층]`;
-        log(`<hr>🏰 ${player.floor}층 진입...`);
+        isRaidMode = false; isArenaMode = false; isPvPMode = false;
+        document.getElementById("map-container").className = "map-dungeon"; document.getElementById("map-title-display").innerText = `🏰 절망의 탑 [${player.floor}층]`; log(`<hr>🏰 ${player.floor}층 진입...`);
         
         mapEntities = [];
         if (player.floor % 5 === 0) {
@@ -691,46 +719,28 @@
             let mobCount = Math.floor(Math.random() * 3) + 3;
             for(let i=0; i<mobCount; i++) {
                 let mx = Math.floor(Math.random() * MAP_SIZE); let my = Math.floor(Math.random() * 7) + 2; 
-                if(!mapEntities.find(e => e.x===mx && e.y===my) && !(mx===5 && my===9)) {
-                    mapEntities.push({ x: mx, y: my, icon: '👹', isMonster: true, isBoss: false, spriteClass: 'sprite-monster' });
-                }
+                if(!mapEntities.find(e => e.x===mx && e.y===my) && !(mx===5 && my===9)) { mapEntities.push({ x: mx, y: my, icon: '👹', isMonster: true, isBoss: false, spriteClass: 'sprite-monster' }); }
             }
         }
-        mapPlayerPos = { x: 5, y: 9 }; 
-        enterMapMode(); autoSave();
+        mapPlayerPos = { x: 5, y: 9 }; enterMapMode(); autoSave();
     }
 
     // ==========================================
     // 4. UI 렌더링
     // ==========================================
-    function changeFloor(dir) {
-        if(!player.maxFloor) player.maxFloor = player.floor;
-        let nf = player.floor + dir; player.floor = Math.min(Math.max(1, nf), player.maxFloor); updateUI();
-    }
+    function changeFloor(dir) { if(!player.maxFloor) player.maxFloor = player.floor; let nf = player.floor + dir; player.floor = Math.min(Math.max(1, nf), player.maxFloor); updateUI(); }
 
     function renderInventory() {
         let cardCount = player.cards ? Object.keys(player.cards).length : 0;
-        let html = `
-            <div class="slot"><div class="slot-icon">🧪</div><div class="slot-name">포션</div><div class="slot-amt">${player.potions}</div></div>
+        let html = `<div class="slot"><div class="slot-icon">🧪</div><div class="slot-name">포션</div><div class="slot-amt">${player.potions}</div></div>
             <div class="slot"><div class="slot-icon">📜</div><div class="slot-name">파방권</div><div class="slot-amt">${player.scrolls}</div></div>
-            <div class="slot"><div class="slot-icon">🃏</div><div class="slot-name">도감카드</div><div class="slot-amt">${cardCount}</div></div>
-        `;
-        
-        const icons = {'미확인 씨앗':'🌱', '물고기':'🐟', '황금잉어':'🐠', '빈 깡통':'🥫'};
-        let slotCount = 3;
+            <div class="slot"><div class="slot-icon">🃏</div><div class="slot-name">도감카드</div><div class="slot-amt">${cardCount}</div></div>`;
+        const icons = {'미확인 씨앗':'🌱', '물고기':'🐟', '황금잉어':'🐠', '빈 깡통':'🥫'}; let slotCount = 3;
         for(let key in player.inventory) {
-            if(key !== "강화석" && player.inventory[key] > 0) {
-                let icon = icons[key] || '📦';
-                html += `<div class="slot"><div class="slot-icon">${icon}</div><div class="slot-name">${key}</div><div class="slot-amt">${player.inventory[key]}</div></div>`;
-                slotCount++;
-            }
+            if(key !== "강화석" && player.inventory[key] > 0) { let icon = icons[key] || '📦'; html += `<div class="slot"><div class="slot-icon">${icon}</div><div class="slot-name">${key}</div><div class="slot-amt">${player.inventory[key]}</div></div>`; slotCount++; }
         }
-        
-        let totalGridSlots = 12;
-        if(slotCount > 12) totalGridSlots = Math.ceil(slotCount/4) * 4;
-        for(let i=slotCount; i<totalGridSlots; i++) {
-            html += `<div class="slot empty-slot"></div>`;
-        }
+        let totalGridSlots = 12; if(slotCount > 12) totalGridSlots = Math.ceil(slotCount/4) * 4;
+        for(let i=slotCount; i<totalGridSlots; i++) { html += `<div class="slot empty-slot"></div>`; }
         document.getElementById("inventory-slots").innerHTML = html;
     }
 
@@ -754,23 +764,17 @@
         document.getElementById("p-atk").innerText = player.atk; document.getElementById("p-def").innerText = player.def;
         document.getElementById("p-crit").innerText = player.critRate; document.getElementById("p-evade").innerText = player.evadeRate;
         document.getElementById("p-speed").innerText = player.speed; document.getElementById("p-combo").innerText = player.comboRate;
+        document.getElementById("p-cp").innerText = player.cp.toLocaleString(); // 🔥 CP 갱신
         
-        document.getElementById("p-gold").innerText = player.gold.toLocaleString();
-        document.getElementById("p-soulstone").innerText = player.soulStones || 0;
-        document.getElementById("p-enhancestone").innerText = player.inventory["강화석"] || 0;
+        document.getElementById("p-gold").innerText = player.gold.toLocaleString(); document.getElementById("p-soulstone").innerText = player.soulStones || 0; document.getElementById("p-enhancestone").innerText = player.inventory["강화석"] || 0;
 
         renderInventory();
 
         let cardCount = player.cards ? Object.keys(player.cards).length : 0;
         document.getElementById("buff-relic").innerText = player.relicLevel || 0;
         if(document.getElementById("buff-dex")) document.getElementById("buff-dex").innerText = cardCount;
-        if(document.getElementById("buff-hp")) {
-            document.getElementById("buff-hp").innerText = player.absHp + player.soulHp;
-            document.getElementById("buff-atk").innerText = player.absAtk + player.soulAtk;
-            document.getElementById("buff-def").innerText = player.absDef + player.soulDef;
-        }
-        document.getElementById("buff-merc").innerText = player.hasMercenary ? "고용됨 (+50공)" : "미고용";
-        document.getElementById("buff-merc").className = player.hasMercenary ? "heal" : "damage";
+        if(document.getElementById("buff-hp")) { document.getElementById("buff-hp").innerText = player.absHp + player.soulHp; document.getElementById("buff-atk").innerText = player.absAtk + player.soulAtk; document.getElementById("buff-def").innerText = player.absDef + player.soulDef; }
+        document.getElementById("buff-merc").innerText = player.hasMercenary ? "고용됨 (+50공)" : "미고용"; document.getElementById("buff-merc").className = player.hasMercenary ? "heal" : "damage";
 
         document.getElementById("p-weapon").innerText = player.weapon; document.getElementById("p-enhance").innerText = player.weaponLevel > 0 ? `(+${player.weaponLevel})` : "";
         document.getElementById("p-armor").innerText = player.armor;
@@ -782,169 +786,158 @@
         if(document.getElementById("enhance-cost")) document.getElementById("enhance-cost").innerText = 200 + (player.weaponLevel * 150);
 
         if(!player.quests) player.quests = { killed: 0 };
-        document.getElementById("q-kill-progress").innerText = `${player.quests.killed}`;
-        document.getElementById("q-kill-bar").style.width = Math.min(100, (player.quests.killed / 500) * 100) + "%";
-        document.getElementById("q-floor-progress").innerText = `${player.maxFloor} / 50`;
-        document.getElementById("q-floor-bar").style.width = Math.min(100, (player.maxFloor / 50) * 100) + "%";
-        document.getElementById("q-gold-progress").innerText = `${Math.floor(player.gold/1000)}k / 100k`;
-        document.getElementById("q-gold-bar").style.width = Math.min(100, (player.gold / 100000) * 100) + "%";
+        document.getElementById("q-kill-progress").innerText = `${player.quests.killed}`; document.getElementById("q-kill-bar").style.width = Math.min(100, (player.quests.killed / 500) * 100) + "%";
+        document.getElementById("q-floor-progress").innerText = `${player.maxFloor} / 50`; document.getElementById("q-floor-bar").style.width = Math.min(100, (player.maxFloor / 50) * 100) + "%";
+        document.getElementById("q-gold-progress").innerText = `${Math.floor(player.gold/1000)}k / 100k`; document.getElementById("q-gold-bar").style.width = Math.min(100, (player.gold / 100000) * 100) + "%";
 
         if (currentMonster) {
             document.getElementById("m-hp").innerText = currentMonster.hp; document.getElementById("m-maxhp").innerText = currentMonster.maxHp === 999999999 ? "∞" : currentMonster.maxHp;
             document.getElementById("m-hp-bar").style.width = Math.max(0, (currentMonster.hp / currentMonster.maxHp) * 100) + "%";
             document.getElementById("m-atk").innerText = currentMonster.atk; document.getElementById("m-def").innerText = currentMonster.def;
             document.getElementById("m-speed").innerText = currentMonster.speed; 
-            document.getElementById("m-floor").innerText = isRaidMode ? "레이드" : (isArenaMode ? "투기장" : player.floor); 
+            document.getElementById("m-floor").innerText = isRaidMode ? "레이드" : (isArenaMode ? "투기장" : (isPvPMode ? "결투장" : player.floor)); 
             document.getElementById("m-name").innerText = currentMonster.name; document.getElementById("m-trait").innerText = monsterTraits[currentMonster.trait].text;
             document.getElementById("skill-cost").innerText = jobStats[player.job].skillCost;
         }
     }
 
     // ==========================================
-    // 5. 신규 컨텐츠: 잊혀진 지하 유적 (미니게임)
+    // 5. 서버 랭킹 & 비동기 PvP (신규)
     // ==========================================
-    let ruinsState = { active: false, grid: [], clicksLeft: 0 };
-
-    function buyExplorationKit() {
-        if(player.gold < 1000) return log("<span class='damage'>탐사 키트를 구매할 골드(1,000G)가 부족합니다.</span>");
-        if(ruinsState.active) return log("<span class='damage'>아직 진행 중인 탐사가 있습니다.</span>");
+    function loadRankings() {
+        if(!isCloudMode) { document.getElementById("ranking-list").innerHTML = "<span class='damage'>오프라인 모드에서는 랭킹을 볼 수 없습니다.</span>"; return; }
+        document.getElementById("ranking-list").innerHTML = "서버에서 랭킹을 불러오는 중... ⏳";
         
-        player.gold -= 1000;
-        ruinsState.active = true;
-        ruinsState.clicksLeft = 5;
-        
-        // 보상 섞기 (16칸 중 7칸 당첨)
-        let items = ['soul', 'enhance', 'enhance', 'gold', 'gold', 'gold', 'card'];
-        let grid = new Array(16).fill('dirt');
-        for(let i=0; i<items.length; i++) grid[i] = items[i];
-        grid.sort(() => Math.random() - 0.5); // Shuffle
-        
-        ruinsState.grid = grid.map(type => ({ type: type, revealed: false }));
-        
-        document.getElementById("btn-ruins-buy").style.display = "none";
-        document.getElementById("ruins-msg").innerText = `흙을 파내어 숨겨진 보물을 찾으세요! (남은 횟수: ${ruinsState.clicksLeft}회)`;
-        
-        renderRuinsGrid(false); updateUI(); autoSave();
+        firebase.firestore().collection("leaderboard").orderBy("cp", "desc").limit(10).get().then(snap => {
+            let html = ""; let rank = 1;
+            snap.forEach(doc => {
+                let d = doc.data();
+                let isMe = (firebase.auth().currentUser && doc.id.startsWith(firebase.auth().currentUser.uid));
+                html += `<div class="ranking-item ${isMe ? 'me' : ''}">
+                    <div><b style="color:#f1c40f; font-size:15px;">${rank}위.</b> ${d.nickname} <span style="color:#aaa;">[${d.job}]</span></div>
+                    <div style="text-align:right;">
+                        <div style="color:#3498db; font-weight:bold;">CP: ${d.cp.toLocaleString()}</div>
+                        <div style="color:#2ecc71; font-size:11px;">최고 ${d.maxFloor}층 / Lv.${d.level}</div>
+                    </div>
+                </div>`;
+                rank++;
+            });
+            document.getElementById("ranking-list").innerHTML = html || "아직 기록된 랭킹이 없습니다.";
+        }).catch(e => { document.getElementById("ranking-list").innerHTML = "<span class='damage'>랭킹을 불러오는데 실패했습니다.</span>"; });
     }
 
-    function renderRuinsGrid(empty) {
-        let html = "";
-        for(let i=0; i<16; i++) {
-            if(empty) {
-                html += `<div class="ruin-cell">🟫</div>`;
-            } else {
-                let cell = ruinsState.grid[i];
-                if(cell.revealed) {
-                    let icon = '🟫';
-                    if(cell.type === 'soul') icon = '💎';
-                    if(cell.type === 'enhance') icon = '⚙️';
-                    if(cell.type === 'gold') icon = '💰';
-                    if(cell.type === 'card') icon = '🃏';
-                    html += `<div class="ruin-cell revealed">${icon}</div>`;
-                } else {
-                    html += `<div class="ruin-cell" onclick="clickRuin(${i})">🟫</div>`;
-                }
-            }
-        }
-        document.getElementById("ruins-grid").innerHTML = html;
-    }
-
-    function clickRuin(index) {
-        if(!ruinsState.active || ruinsState.clicksLeft <= 0 || ruinsState.grid[index].revealed) return;
+    function startPvP() {
+        if(!isCloudMode) return log("<span class='damage'>오프라인 모드에서는 결투장을 이용할 수 없습니다.</span>");
+        if(player.hp < player.maxHp) return log("<span class='damage'>체력을 가득 채운 후 도전하세요!</span>");
         
-        ruinsState.clicksLeft--;
-        let cell = ruinsState.grid[index];
-        cell.revealed = true;
-        
-        if(cell.type === 'soul') { player.soulStones++; log("<b><span class='epic'>[유적 발굴] 영혼석을 발견했습니다!!</span></b>"); }
-        else if(cell.type === 'enhance') { player.inventory["강화석"] = (player.inventory["강화석"]||0)+1; log("<span class='highlight'>[유적 발굴] 강화석을 캐냈습니다!</span>"); }
-        else if(cell.type === 'gold') { player.gold += 3000; log("<b><span style='color:#f1c40f;'>[유적 발굴] 3,000G가 든 돈자루를 찾았습니다!</span></b>"); }
-        else if(cell.type === 'card') { 
-            let allMonsters = [...baseMonsters, ...bossMonsters];
-            let randMob = allMonsters[Math.floor(Math.random() * allMonsters.length)].name;
-            log(`<b><span style='color:#00ffff;'>[유적 발굴] 땅 속에서 오래된 카드를 발견했습니다!</span></b>`);
-            dropCard(randMob);
-        } else {
-            log("<span style='color:#aaa;'>그냥 흙덩이입니다...</span>");
-        }
-
-        if(ruinsState.clicksLeft <= 0) {
-            ruinsState.active = false;
-            document.getElementById("ruins-msg").innerHTML = "<span class='damage'>탐사 키트 내구도가 다 되었습니다.</span>";
-            document.getElementById("btn-ruins-buy").style.display = "block";
-            // 남은 보물 투명하게 보여주기
-            ruinsState.grid.forEach(c => c.revealed = true);
-        } else {
-            document.getElementById("ruins-msg").innerText = `흙을 파내어 숨겨진 보물을 찾으세요! (남은 횟수: ${ruinsState.clicksLeft}회)`;
-        }
-        
-        renderRuinsGrid(false); updateUI(); autoSave();
+        log("⚔️ 결투 상대를 찾는 중...");
+        firebase.firestore().collection("leaderboard").orderBy("cp", "desc").limit(20).get().then(snap => {
+            let ops = [];
+            snap.forEach(doc => { if(!doc.id.startsWith(firebase.auth().currentUser.uid)) ops.push(doc.data()); });
+            if(ops.length === 0) return log("<span class='damage'>상대를 찾을 수 없습니다. (현재 등록된 다른 유저가 없습니다)</span>");
+            
+            let enemy = ops[Math.floor(Math.random() * ops.length)];
+            isPvPMode = true; isRaidMode = false; isArenaMode = false;
+            
+            currentMonster = {
+                name: `[유저] ${enemy.nickname} (${enemy.job})`,
+                trait: "무특성",
+                hp: enemy.hp, maxHp: enemy.hp,
+                atk: enemy.atk, def: enemy.def, speed: enemy.speed,
+                exp: enemy.level * 30, gold: enemy.level * 100
+            };
+            
+            log(`<hr><b><span class='damage'>결투 시작! 상대는 Lv.${enemy.level} ${enemy.nickname}(${enemy.job}) 입니다!</span></b>`);
+            toggleMode("combat"); updateUI();
+        }).catch(e => log("상대 매칭 실패!"));
     }
 
     // ==========================================
     // 6. 상점 및 시스템 기능
     // ==========================================
-    function renderGreenhouse() {
-        document.getElementById("ui-seeds").innerText = player.inventory["미확인 씨앗"] || 0;
-        let html = ""; let now = Date.now();
+    let ruinsState = { active: false, grid: [], clicksLeft: 0 };
+    function buyExplorationKit() {
+        if(player.gold < 1000) return log("<span class='damage'>탐사 키트를 구매할 골드(1,000G)가 부족합니다.</span>");
+        if(ruinsState.active) return log("<span class='damage'>아직 진행 중인 탐사가 있습니다.</span>");
         
+        player.gold -= 1000; ruinsState.active = true; ruinsState.clicksLeft = 5;
+        let items = ['soul', 'enhance', 'enhance', 'gold', 'gold', 'gold', 'card'];
+        let grid = new Array(16).fill('dirt');
+        for(let i=0; i<items.length; i++) grid[i] = items[i];
+        grid.sort(() => Math.random() - 0.5);
+        ruinsState.grid = grid.map(type => ({ type: type, revealed: false }));
+        document.getElementById("btn-ruins-buy").style.display = "none";
+        document.getElementById("ruins-msg").innerText = `흙을 파내어 숨겨진 보물을 찾으세요! (남은 횟수: ${ruinsState.clicksLeft}회)`;
+        renderRuinsGrid(false); updateUI(); autoSave();
+    }
+    function renderRuinsGrid(empty) {
+        let html = "";
+        for(let i=0; i<16; i++) {
+            if(empty) { html += `<div class="ruin-cell">🟫</div>`; } 
+            else {
+                let cell = ruinsState.grid[i];
+                if(cell.revealed) {
+                    let icon = '🟫'; if(cell.type === 'soul') icon = '💎'; if(cell.type === 'enhance') icon = '⚙️'; if(cell.type === 'gold') icon = '💰'; if(cell.type === 'card') icon = '🃏';
+                    html += `<div class="ruin-cell revealed">${icon}</div>`;
+                } else { html += `<div class="ruin-cell" onclick="clickRuin(${i})">🟫</div>`; }
+            }
+        }
+        if(document.getElementById("ruins-grid")) document.getElementById("ruins-grid").innerHTML = html;
+    }
+    function clickRuin(index) {
+        if(!ruinsState.active || ruinsState.clicksLeft <= 0 || ruinsState.grid[index].revealed) return;
+        ruinsState.clicksLeft--; let cell = ruinsState.grid[index]; cell.revealed = true;
+        if(cell.type === 'soul') { player.soulStones++; log("<b><span class='epic'>[유적 발굴] 영혼석을 발견했습니다!!</span></b>"); }
+        else if(cell.type === 'enhance') { player.inventory["강화석"] = (player.inventory["강화석"]||0)+1; log("<span class='highlight'>[유적 발굴] 강화석을 캐냈습니다!</span>"); }
+        else if(cell.type === 'gold') { player.gold += 3000; log("<b><span style='color:#f1c40f;'>[유적 발굴] 3,000G가 든 돈자루를 찾았습니다!</span></b>"); }
+        else if(cell.type === 'card') { 
+            let allMonsters = [...baseMonsters, ...bossMonsters]; let randMob = allMonsters[Math.floor(Math.random() * allMonsters.length)].name;
+            log(`<b><span style='color:#00ffff;'>[유적 발굴] 땅 속에서 오래된 카드를 발견했습니다!</span></b>`); dropCard(randMob);
+        } else { log("<span style='color:#aaa;'>그냥 흙덩이입니다...</span>"); }
+
+        if(ruinsState.clicksLeft <= 0) {
+            ruinsState.active = false; document.getElementById("ruins-msg").innerHTML = "<span class='damage'>탐사 키트 내구도가 다 되었습니다.</span>"; document.getElementById("btn-ruins-buy").style.display = "block";
+            ruinsState.grid.forEach(c => c.revealed = true);
+        } else { document.getElementById("ruins-msg").innerText = `흙을 파내어 숨겨진 보물을 찾으세요! (남은 횟수: ${ruinsState.clicksLeft}회)`; }
+        renderRuinsGrid(false); updateUI(); autoSave();
+    }
+
+    function renderGreenhouse() {
+        document.getElementById("ui-seeds").innerText = player.inventory["미확인 씨앗"] || 0; let html = ""; let now = Date.now();
         player.plants.forEach((p, i) => {
             html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#1a1a24; border:1px solid #334; border-radius:6px; padding:12px;">`;
-            if (p.state === 'empty') {
-                html += `<div><span style="font-size:24px; margin-right:10px;">🪴</span> 빈 화분</div><button class="npc-btn" onclick="plantSeed(${i})" style="height:40px;">씨앗 심기</button>`;
-            } else if (p.state === 'growing') {
-                let left = Math.ceil((p.time - now) / 1000); if (left < 0) left = 0;
-                html += `<div><span style="font-size:24px; margin-right:10px; opacity:0.6;">🌱</span> 자라는 중...</div><button disabled style="height:40px; background:#444;">${left}초 남음</button>`;
-            } else if (p.state === 'ready') {
-                html += `<div><span style="font-size:24px; margin-right:10px; color:#f1c40f;">🍎</span> <b>수확 가능!</b></div><button class="gacha-btn" onclick="harvestPlant(${i})" style="height:40px;">수확하기</button>`;
-            }
+            if (p.state === 'empty') { html += `<div><span style="font-size:24px; margin-right:10px;">🪴</span> 빈 화분</div><button class="npc-btn" onclick="plantSeed(${i})" style="height:40px;">씨앗 심기</button>`; } 
+            else if (p.state === 'growing') { let left = Math.ceil((p.time - now) / 1000); if (left < 0) left = 0; html += `<div><span style="font-size:24px; margin-right:10px; opacity:0.6;">🌱</span> 자라는 중...</div><button disabled style="height:40px; background:#444;">${left}초 남음</button>`; } 
+            else if (p.state === 'ready') { html += `<div><span style="font-size:24px; margin-right:10px; color:#f1c40f;">🍎</span> <b>수확 가능!</b></div><button class="gacha-btn" onclick="harvestPlant(${i})" style="height:40px;">수확하기</button>`; }
             html += `</div>`;
         });
         if(document.getElementById("greenhouse-pots")) document.getElementById("greenhouse-pots").innerHTML = html;
     }
-
-    function plantSeed(index) {
-        if ((player.inventory["미확인 씨앗"] || 0) < 1) return log("<span class='damage'>미확인 씨앗이 없습니다. (탑의 몬스터가 드랍합니다)</span>");
-        player.inventory["미확인 씨앗"]--; player.plants[index] = { state: 'growing', time: Date.now() + 60000 };
-        log("🌱 씨앗을 심었습니다! 1분 뒤에 수확할 수 있습니다."); updateUI(); renderGreenhouse(); autoSave();
-    }
-
+    function plantSeed(index) { if ((player.inventory["미확인 씨앗"] || 0) < 1) return log("<span class='damage'>미확인 씨앗이 없습니다. (탑의 몬스터가 드랍합니다)</span>"); player.inventory["미확인 씨앗"]--; player.plants[index] = { state: 'growing', time: Date.now() + 60000 }; log("🌱 씨앗을 심었습니다! 1분 뒤에 수확할 수 있습니다."); updateUI(); renderGreenhouse(); autoSave(); }
     function harvestPlant(index) {
-        let p = player.plants[index]; if (p.state !== 'ready') return;
-        let r = Math.random();
+        let p = player.plants[index]; if (p.state !== 'ready') return; let r = Math.random();
         if (r < 0.25) { player.absHp += 20; log("<b><span class='heal'>[생명의 열매]를 수확했습니다! 최대 체력이 20 증가합니다.</span></b>"); }
         else if (r < 0.5) { player.absAtk += 3; log("<b><span class='damage'>[투신의 열매]를 수확했습니다! 공격력이 3 증가합니다.</span></b>"); }
         else if (r < 0.75) { player.absDef += 3; log("<b><span style='color:#f39c12;'>[철벽의 열매]를 수확했습니다! 방어력이 3 증가합니다.</span></b>"); }
         else { player.gold += 3000; log("<b><span class='highlight'>[황금 사과]를 수확했습니다! 3,000G에 판매했습니다.</span></b>"); }
         player.plants[index] = { state: 'empty', time: 0 }; calcStats(); updateUI(); renderGreenhouse(); autoSave();
     }
-
     function sellLoot() {
         let earned = 0;
         if(player.inventory["빈 깡통"]) { earned += player.inventory["빈 깡통"] * 5; player.inventory["빈 깡통"] = 0; }
         if(player.inventory["물고기"]) { earned += player.inventory["물고기"] * 50; player.inventory["물고기"] = 0; }
         if(player.inventory["황금잉어"]) { earned += player.inventory["황금잉어"] * 500; player.inventory["황금잉어"] = 0; }
-        if(earned > 0) { player.gold += earned; log(`전리품을 모두 팔아 <b><span class='highlight'>${earned}G</span></b>를 얻었습니다!`); updateUI(); autoSave(); } 
-        else { log("<span class='damage'>팔 수 있는 전리품이 가방에 없습니다.</span>"); }
+        if(earned > 0) { player.gold += earned; log(`전리품을 모두 팔아 <b><span class='highlight'>${earned}G</span></b>를 얻었습니다!`); updateUI(); autoSave(); } else { log("<span class='damage'>팔 수 있는 전리품이 가방에 없습니다.</span>"); }
     }
-
     function dropCard(monsterName) {
         let baseName = monsterName.replace(/\[\d+W\] /, "").replace("투기장 ", "").replace("💀 ", "");
         if (!player.cards) player.cards = {};
-        if (!player.cards[baseName]) {
-            player.cards[baseName] = 1; log(`<b><span style="color:#00ffff;">[도감] 새로운 카드 획득! : ${baseName}</span></b>`);
-            calcStats(); updateUI();
-        } else {
-            player.cards[baseName]++; log(`<span style="color:#aaa;">[도감] 중복 카드 획득 : ${baseName} (보유: ${player.cards[baseName]}장)</span>`);
-            updateUI();
-        }
+        if (!player.cards[baseName]) { player.cards[baseName] = 1; log(`<b><span style="color:#00ffff;">[도감] 새로운 카드 획득! : ${baseName}</span></b>`); calcStats(); updateUI(); } 
+        else { player.cards[baseName]++; log(`<span style="color:#aaa;">[도감] 중복 카드 획득 : ${baseName} (보유: ${player.cards[baseName]}장)</span>`); updateUI(); }
     }
-
     function renderDex() {
-        if(!player.cards) player.cards = {};
-        let collected = Object.keys(player.cards).length; let total = baseMonsters.length + bossMonsters.length;
+        if(!player.cards) player.cards = {}; let collected = Object.keys(player.cards).length; let total = baseMonsters.length + bossMonsters.length;
         document.getElementById("dex-collected").innerText = `${collected}`; document.getElementById("dex-bonus").innerText = collected; 
-
         let html = ""; let allMonsters = [...baseMonsters, ...bossMonsters];
         allMonsters.forEach(m => {
             let mName = m.name.replace("💀 ", ""); let count = player.cards[mName] || 0;
@@ -953,19 +946,16 @@
         });
         document.getElementById("dex-list-container").innerHTML = html;
     }
-
     function upgradeRelic() { let cost = Math.floor(100000 * Math.pow(1.5, player.relicLevel)); if (player.gold >= cost) { player.gold -= cost; player.relicLevel++; log(`<b><span style='color:#00ffff;'>🔮 유물이 +${player.relicLevel} 단계로 강화됨!</span></b>`); calcStats(); updateUI(); autoSave(); } else log("골드 부족!"); }
     function rest() { let cost = 50 + ((player.level - 1) * 20); if (player.gold >= cost) { player.gold -= cost; player.hp = player.maxHp; player.mp = player.maxMp; log(`여관 휴식 (-${cost}G)`); updateUI(); autoSave(); enterMapMode(); } else log("골드 부족!"); }
     function buyPotion() { if(player.gold>=50){player.gold-=50; player.potions++; log("포션 구매"); updateUI(); autoSave();} }
     function buyItem(t, p) { if(player.gold>=p){player.gold-=p; player.scrolls++; log("주문서 구매!"); updateUI(); autoSave();} }
     function buyEquip(t, n, p, s) { if(player.gold>=p){player.gold-=p; if(t==='무기'){player.weapon=n; baseWeaponAtk=s; player.weaponLevel=0;}else{player.armor=n; baseArmorDef=s;} log(`[${n}] 장착!`); updateUI(); autoSave();} else log("골드가 부족합니다."); }
     function hireMercenary() { if(player.gold>=2000 && !player.hasMercenary){player.gold-=2000; player.hasMercenary=true; log("용병 고용!"); updateUI(); autoSave();} }
-    
     function enhanceWeapon() {
         let cost = 200 + (player.weaponLevel * 150); let stones = player.inventory["강화석"] || 0;
         if(player.gold < cost || stones < 1) return log("골드나 강화석 부족!");
         player.gold -= cost; player.inventory["강화석"]--;
-        
         let successRate = Math.max(0.2, 1.0 - (player.weaponLevel * 0.05));
         if(Math.random() < successRate) { player.weaponLevel++; log(`<b><span style='color:#f1c40f;'>강화 성공! (+${player.weaponLevel})</span></b>`); } 
         else {
@@ -977,9 +967,7 @@
         }
         updateUI(); autoSave();
     }
-
     function drawPet() { if(player.gold < 1000) return log("골드가 부족합니다."); player.gold -= 1000; let pet = petDB[Math.floor(Math.random() * petDB.length)]; player.pet = pet; log(`<b><span class='epic'>[${pet.name}]</span></b> 펫이 부화했습니다!`); calcStats(); updateUI(); autoSave(); }
-    
     function reincarnate() {
         if(player.maxFloor < 20) return log("최고 도달 층수가 20층 이상이어야 환생할 수 있습니다.");
         if(!confirm("환생하시겠습니까? 레벨, 골드, 장비, 직업이 초기화되고 영혼석을 얻습니다.")) return;
@@ -988,27 +976,22 @@
         player.armor = "평상복"; baseArmorDef = 0; player.job = player.baseJob; player.promoted = false; calcStats(); player.hp = player.maxHp; player.mp = player.maxMp;
         log("<b><span class='epic'>🌀 환생했습니다! 새로운 힘이 느껴집니다.</span></b>"); updateUI(); autoSave();
     }
-
     function upgradeSoul(type) { if(player.soulStones < 10) return log("영혼석이 부족합니다. (10개 필요)"); player.soulStones -= 10; if(type === 'hp') player.soulHp += 50; if(type === 'atk') player.soulAtk += 5; if(type === 'def') player.soulDef += 5; calcStats(); updateUI(); autoSave(); log("영혼이 강화되었습니다."); }
     function attemptAwakening() {
         if(player.isAwakened) return log("이미 각성한 상태입니다."); if(player.hp <= 100) return log("체력이 부족합니다. (100 초과 필요)");
         player.hp -= 100; if(Math.random() < 0.015) { player.isAwakened = true; log("<b><span class='damage'>🩸 피의 제단이 응답했습니다... [초월 각성] 성공!</span></b>"); calcStats(); updateUI(); autoSave(); } 
         else { log("제단이 피를 삼켰으나 아무 일도 일어나지 않았습니다. (각성 실패)"); updateUI(); }
     }
-
     function resetJobTier() {
         if(player.job === player.baseJob) return log("<span class='damage'>이미 1차 직업 상태입니다.</span>");
         if(confirm("정말로 1차 직업으로 초기화하시겠습니까? (레벨과 스탯은 유지되며 다시 승급할 수 있습니다.)")) { player.job = player.baseJob; player.promoted = false; log("<b><span class='highlight'>직업이 1차로 초기화되었습니다. 다른 승급 트리를 선택할 수 있습니다.</span></b>"); calcStats(); updateUI(); renderJobs(); autoSave(); }
     }
-
     function renderJobs() {
         let html = ""; let available = false;
         for(let j in jobStats) { let data = jobStats[j]; if(data.reqJob === player.job && player.level >= data.reqLvl) { available = true; html += `<button onclick="promoteJob('${j}')" style="width:100%; margin-bottom:5px; background:#2980b9;">${j} 승급 (Lv.${data.reqLvl}+)</button>`; } }
         document.getElementById("job-choices").innerHTML = available ? html : "<p style='font-size:12px; color:#aaa; grid-column:span 2;'>현재 승급 가능한 직업이 없습니다.</p>";
     }
-
     function promoteJob(j) { player.job = j; player.promoted = true; log(`<b><span class='highlight'>[${j}]</span></b>로 전직했습니다!`); calcStats(); player.hp = player.maxHp; player.mp = player.maxMp; updateUI(); renderJobs(); autoSave(); }
-
     function doFishing() {
         if (player.mp < 10) return log("<span class='damage'>마나가 부족합니다. (10 필요)</span>");
         player.mp -= 10; log("🎣 찌를 던지고 기다립니다...");
@@ -1020,10 +1003,8 @@
             else if (rand < 0.98) { player.inventory["강화석"] = (player.inventory["강화석"]||0) + 1; log("<b><span class='highlight'>물고기 뱃속에서 강화석을 발견했습니다!</span></b>"); } 
             else { player.soulStones++; log("<b><span class='epic'>전설의 심해어! 영혼석을 1개 얻었습니다!!</span></b>"); }
             updateUI(); autoSave();
-        }, 1000);
-        updateUI();
+        }, 1000); updateUI();
     }
-
     function buyFromBlackMarket(item) {
         if (item === 'stone') { if (player.soulStones < 1) return log("영혼석이 부족합니다."); player.soulStones--; player.inventory["강화석"] = (player.inventory["강화석"]||0) + 5; log("강화석 5개를 얻었습니다."); } 
         else if (item === 'scroll') { if (player.soulStones < 1) return log("영혼석이 부족합니다."); player.soulStones--; player.scrolls += 2; log("파방 주문서 2장을 얻었습니다."); } 
@@ -1033,7 +1014,7 @@
     }
 
     // ==========================================
-    // 7. 전투 로직
+    // 7. 전투 로직 (PvP 결투장 기능 포함)
     // ==========================================
     function calcDamage(atk, def) { let b = atk - def; return Math.floor((b < 1 ? 1 : b) * (0.9 + Math.random() * 0.2)); }
 
@@ -1049,6 +1030,7 @@
     function doPlayerAction(type, next) {
         if (type === "run") {
             if (isRaidMode) return log("레이드 도주 불가!");
+            if (isPvPMode) { log("<b><span style='color:#e74c3c;'>결투장에서 기권했습니다.</span></b>"); player.hp=1; isPvPMode=false; currentMonster=null; enterMapMode(); updateUI(); return; }
             if (isArenaMode) { log("<b><span style='color:#e67e22;'>투기장 전투를 중단하고 무사히 빠져나왔습니다.</span></b>"); isArenaMode = false; currentMonster = null; currentInteractingEntity = null; loadTownMap(); updateUI(); autoSave(); return; }
             if (Math.random() < 0.3) { log("도망 성공!"); currentMonster = null; enterMapMode(); return; } else { log("도망 실패!"); next(); return; }
         }
@@ -1089,7 +1071,15 @@
         if (Math.random() < (currentMonster.trait==="암살"?0.25:0.1)) { eDmg = Math.floor(eDmg * 1.5); log(`<span class='damage'>적 치명타!</span>`); }
         player.hp -= eDmg; log(`<span class='damage'>적 공격! (${eDmg} 피해)</span>`);
         if (currentMonster.trait === "흡혈") currentMonster.hp = Math.min(currentMonster.maxHp, currentMonster.hp + Math.floor(eDmg*0.3));
-        if (player.hp <= 0) { player.hp = 0; gameOver(); } else next();
+        
+        if (player.hp <= 0) { 
+            player.hp = 0; 
+            if(isPvPMode) {
+                log("<hr><b><span class='damage'>결투에서 패배했습니다... (사망 패널티 없음)</span></b>");
+                player.hp = 1; isPvPMode = false; currentMonster = null; enterMapMode(); updateUI(); return;
+            }
+            gameOver(); 
+        } else next();
     }
 
     function endPhase() {
@@ -1103,6 +1093,12 @@
     }
 
     function winCombat() {
+        if(isPvPMode) {
+            log(`<hr><b><span class='epic'>결투 승리!! 보상으로 ${currentMonster.gold.toLocaleString()}G를 획득했습니다!</span></b>`);
+            player.gold += currentMonster.gold; player.exp += currentMonster.exp;
+            isPvPMode = false; currentMonster = null; checkLevelUp(); enterMapMode(); updateUI(); autoSave(); return;
+        }
+
         log(`<b><span style='color:#3498db;'>승리!</span></b>`); player.exp += currentMonster.exp; player.gold += currentMonster.gold;
         if(!player.quests) player.quests = { killed: 0 }; player.quests.killed++;
         let bHp = Math.floor(Math.random()*3)+2; let bAtk = Math.random()<0.4?1:0; let bDef = Math.random()<0.3?1:0;
@@ -1147,7 +1143,7 @@
     }
 
     function revive() {
-        isDead = false; isArenaMode = false; let pen = Math.floor(player.gold * 0.1); player.gold = Math.max(0, player.gold - pen); 
+        isDead = false; isArenaMode = false; isPvPMode = false; let pen = Math.floor(player.gold * 0.1); player.gold = Math.max(0, player.gold - pen); 
         player.hp = player.maxHp; currentMonster = null; log(`<hr><span class='heal'>마을에서 부활했습니다. (-${pen}G)</span>`);
         document.querySelectorAll("button").forEach(b => b.disabled = false); loadTownMap(); updateUI(); autoSave();
     }
