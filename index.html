@@ -9,74 +9,112 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
+        /* 🔥 레트로 픽셀 폰트 (네오둥근모) 적용 */
+        @font-face {
+            font-family: 'NeoDunggeunmo';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.3/NeoDunggeunmo.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         body {
-            background-color: #050505; color: #e0e0e0; font-family: 'Courier New', Courier, monospace;
+            background-color: #050505; color: #e0e0e0; 
+            font-family: 'NeoDunggeunmo', 'Courier New', monospace; /* 폰트 변경 */
             display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;
+            line-height: 1.2;
         }
         #game-container {
-            width: 1050px; background-color: #111; border: 2px solid #500;
-            border-radius: 10px; padding: 20px; box-shadow: 0 0 40px rgba(255, 0, 0, 0.2);
+            width: 1050px; background-color: #111; 
+            border: 4px solid #500; /* 테두리를 두껍게 하여 도트 느낌 강조 */
+            border-radius: 0; padding: 20px; box-shadow: 0 0 40px rgba(255, 0, 0, 0.2);
             position: relative;
         }
-        h1 { text-align: center; color: #e74c3c; border-bottom: 2px dashed #622; padding-bottom: 10px; margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
+        h1 { text-align: center; color: #e74c3c; border-bottom: 4px dashed #622; padding-bottom: 10px; margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
         
         #login-screen, #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.95); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 20; border-radius: 10px;
+            justify-content: center; align-items: center; z-index: 20;
         }
         #start-screen { z-index: 10; display: none; }
         
-        .auth-box { background: #1a1a1a; padding: 30px; border: 1px solid #444; border-radius: 8px; text-align: center; }
-        .auth-box input { width: 80%; padding: 10px; margin: 10px 0; background: #000; border: 1px solid #555; color: #fff; border-radius: 4px; font-family: inherit;}
-        .save-indicator { font-size: 13px; color: #2ecc71; opacity: 0; transition: opacity 0.5s; font-weight: normal;}
+        .auth-box { background: #1a1a1a; padding: 30px; border: 4px solid #444; text-align: center; }
+        .auth-box input { width: 80%; padding: 12px; margin: 10px 0; background: #000; border: 2px solid #555; color: #fff; font-family: inherit; font-size: 16px;}
+        .save-indicator { font-size: 16px; color: #2ecc71; opacity: 0; transition: opacity 0.5s; font-weight: normal;}
 
-        #start-screen h2 { color: #f1c40f; margin-bottom: 20px; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
-        .job-btn { font-size: 16px; padding: 12px 20px; width: 250px; background-color: #2c3e50; border: 1px solid #34495e; color: white;}
+        #start-screen h2 { color: #f1c40f; margin-bottom: 20px; text-shadow: 2px 2px 0 #000; }
+        .job-btn { font-size: 18px; padding: 12px 20px; width: 300px; background-color: #2c3e50; border: 2px solid #34495e; color: white;}
         .job-btn:hover { background-color: #34495e; cursor: pointer;}
         .job-row { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; gap: 5px; }
 
         .panels { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px; }
-        .stat-panel { flex: 1; background-color: #1a1a1a; padding: 15px; border-radius: 5px; border: 1px solid #333; }
-        .stat-panel h3 { margin-top: 0; color: #3498db; border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 16px;}
+        .stat-panel { flex: 1; background-color: #1a1a1a; padding: 15px; border: 2px solid #333; }
+        .stat-panel h3 { margin-top: 0; color: #3498db; border-bottom: 2px solid #444; padding-bottom: 5px; font-size: 18px; text-shadow: 1px 1px 0 #000;}
         #monster-panel { display: none; border-color: #c0392b; background-color: #2a0808; }
         #monster-panel h3 { color: #ff4757; }
         
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 13px; }
-        .equipment { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #444; font-size: 13px; color: #bdc3c7;}
-        #inventory-list { font-size: 13px; color: #f39c12; margin-top: 10px; height: 60px; overflow-y: auto;}
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 16px; margin-top: 10px; }
+        
+        /* 🔥 HP/MP/EXP 상태바 디자인 (새로 추가됨) */
+        .bar-container {
+            width: 100%; height: 18px; background-color: #222; border: 2px solid #000; 
+            position: relative; margin-top: 2px;
+        }
+        .bar-fill {
+            height: 100%; background-color: #e74c3c; width: 100%;
+            transition: width 0.3s ease-out; /* 부드럽게 닳는 애니메이션 */
+        }
+        .mp-fill { background-color: #3498db; }
+        .exp-fill { background-color: #f1c40f; }
+        .bar-text {
+            position: absolute; top: -1px; left: 0; width: 100%; text-align: center;
+            font-size: 14px; color: #fff;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* 글씨 가독성 향상 */
+        }
+
+        .equipment { margin-top: 15px; padding-top: 10px; border-top: 2px dashed #444; font-size: 15px; color: #bdc3c7; line-height: 1.5;}
+        #inventory-list { font-size: 15px; color: #f39c12; margin-top: 10px; height: 60px; overflow-y: auto;}
         
         #log-window {
             height: 220px; background-color: #000; color: #ccc; padding: 15px;
-            border: 1px solid #500; overflow-y: auto; margin-bottom: 10px; font-size: 14px; line-height: 1.6;
+            border: 4px solid #500; overflow-y: auto; margin-bottom: 10px; font-size: 16px; line-height: 1.6;
         }
+        
         .controls { text-align: center; display: flex; flex-direction: column; gap: 10px;}
-        .btn-group { padding: 10px; background-color: #151515; border-radius: 5px; border: 1px solid #333; }
-        .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .btn-group { padding: 10px; background-color: #151515; border: 2px solid #333; }
+        .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         
+        /* 🔥 도트 게임 스타일의 입체적인 버튼 */
         button {
-            background-color: #222; color: #fff; border: 1px solid #555; padding: 8px 12px;
-            margin: 3px; font-size: 13px; cursor: pointer; border-radius: 5px; transition: 0.2s;
+            background-color: #222; color: #fff; border: 2px solid #555; padding: 10px 12px;
+            margin: 3px; font-size: 16px; cursor: pointer; font-family: inherit;
+            box-shadow: 3px 3px 0px #000; /* 입체감 그림자 */
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-        button:hover { background-color: #444; }
-        button:disabled { background-color: #111; color: #444; cursor: not-allowed; border-color: #222;}
+        button:hover { background-color: #444; border-color: #777;}
+        button:active {
+            transform: translate(3px, 3px); /* 누를 때 쏙 들어가는 효과 */
+            box-shadow: 0px 0px 0px #000;
+        }
+        button:disabled { background-color: #111; color: #444; cursor: not-allowed; border-color: #222; box-shadow: none; transform: none;}
         
+        /* 버튼 색상들 */
         .skill-btn { background-color: #2980b9; border-color: #3498db; }
-        .system-btn { background-color: #8e44ad; }
-        .enhance-btn { background-color: #d35400; font-weight: bold;}
-        .gacha-btn { background-color: #f39c12; color: #000; font-weight: bold; }
-        .tower-btn { background-color: #c0392b; font-weight: bold; border-color: #e74c3c; }
-        .npc-btn { background-color: #27ae60; color: white; font-weight: bold;}
-        .awake-btn { background-color: #000; color: #ff0044; border: 1px solid #ff0044; font-weight: bold; text-shadow: 0 0 5px #ff0044;}
+        .system-btn { background-color: #8e44ad; border-color: #9b59b6;}
+        .enhance-btn { background-color: #d35400; border-color: #e67e22;}
+        .gacha-btn { background-color: #f39c12; color: #000; border-color: #f1c40f;}
+        .tower-btn { background-color: #c0392b; border-color: #e74c3c; }
+        .npc-btn { background-color: #27ae60; color: white; border-color: #2ecc71;}
+        .awake-btn { background-color: #000; color: #ff0044; border: 2px solid #ff0044; box-shadow: 3px 3px 0px rgba(255,0,68,0.5);}
         .awake-btn:hover { background-color: #ff0044; color: #fff; }
         
-        .highlight { color: #f1c40f; font-weight: bold; }
-        .damage { color: #ff4757; font-weight: bold; }
+        .highlight { color: #f1c40f; }
+        .damage { color: #ff4757; }
         .heal { color: #2ecc71; }
-        .epic { color: #9b59b6; font-weight: bold; }
-        .awakened-text { color: #ff0044; font-weight: bold; text-shadow: 0 0 8px #ff0044; }
-        .npc-chat { color: #1abc9c; font-style: italic; }
-        .trait-text { color: #e67e22; font-weight: bold; font-size: 12px; }
+        .epic { color: #9b59b6; }
+        .awakened-text { color: #ff0044; text-shadow: 0 0 5px #ff0044; }
+        .npc-chat { color: #1abc9c; }
+        .trait-text { color: #e67e22; font-size: 14px; }
         
         .menu-section { display: none; }
         .active-actions { display: block !important; }
@@ -89,16 +127,16 @@
     <div id="login-screen">
         <div class="auth-box">
             <h2 style="color: #e74c3c; margin-top:0;">☁️ 절망의 탑 : 온라인</h2>
-            <p style="font-size: 13px; color: #aaa;">이메일과 비밀번호를 입력해 클라우드에 접속하세요.</p>
+            <p style="font-size: 14px; color: #aaa;">이메일과 비밀번호를 입력해 클라우드에 접속하세요.</p>
             <input type="email" id="auth-email" placeholder="이메일 (예: test@game.com)"><br>
             <input type="password" id="auth-pwd" placeholder="비밀번호 (6자리 이상)"><br>
             
             <div style="display: flex; gap: 10px; width: 80%; margin: 15px auto 0 auto;">
-                <button class="epic" onclick="handleLogin()" style="flex: 1; padding: 12px; font-weight:bold;">로그인</button>
-                <button class="epic" onclick="handleSignUp()" style="flex: 1; padding: 12px; font-weight:bold; background-color: #2980b9; border-color: #3498db;">회원가입</button>
+                <button class="epic" onclick="handleLogin()" style="flex: 1;">로그인</button>
+                <button class="epic skill-btn" onclick="handleSignUp()" style="flex: 1;">회원가입</button>
             </div>
             
-            <p id="auth-msg" style="color: #ff4757; font-size: 12px; margin-top: 10px;"></p>
+            <p id="auth-msg" style="color: #ff4757; font-size: 14px; margin-top: 10px;"></p>
         </div>
     </div>
 
@@ -108,21 +146,27 @@
 
     <h1>
         🏰 절망의 탑 [최고 기록: <span id="p-maxfloor">0</span>층]
-        <span class="save-indicator" id="save-status">☁️ 자동 저장됨</span>
+        <span class="save-indicator" id="save-status">☁️ AUTO SAVED</span>
     </h1>
 
     <div class="panels">
         <div class="stat-panel" id="player-panel">
             <h3>🛡️ <span id="p-job">직업</span> (Lv.<span id="p-level">1</span>)</h3>
             <div class="stat-grid">
-                <div>HP: <span id="p-hp">0</span> / <span id="p-maxhp">0</span></div>
-                <div>MP: <span id="p-mp">0</span> / <span id="p-maxmp">0</span></div>
-                <div>공격력: <span id="p-atk">0</span></div>
-                <div>방어력: <span id="p-def">0</span></div>
-                <div>크리티컬: <span id="p-crit">0</span>%</div>
-                <div>회피율: <span id="p-evade">0</span>%</div>
-                <div>EXP: <span id="p-exp">0</span> / <span id="p-maxexp">0</span></div>
-                <div>💰 골드: <span id="p-gold">0</span> G</div>
+                <div style="grid-column: span 2;">
+                    HP: <div class="bar-container"><div class="bar-fill" id="p-hp-bar"></div><div class="bar-text"><span id="p-hp">0</span> / <span id="p-maxhp">0</span></div></div>
+                </div>
+                <div style="grid-column: span 2;">
+                    MP: <div class="bar-container"><div class="bar-fill mp-fill" id="p-mp-bar"></div><div class="bar-text"><span id="p-mp">0</span> / <span id="p-maxmp">0</span></div></div>
+                </div>
+                <div style="grid-column: span 2;">
+                    EXP: <div class="bar-container"><div class="bar-fill exp-fill" id="p-exp-bar"></div><div class="bar-text"><span id="p-exp">0</span> / <span id="p-maxexp">0</span></div></div>
+                </div>
+                <div>⚔️ 공격력: <span id="p-atk">0</span></div>
+                <div>🛡️ 방어력: <span id="p-def">0</span></div>
+                <div>⚡ 크리티컬: <span id="p-crit">0</span>%</div>
+                <div>💨 회피율: <span id="p-evade">0</span>%</div>
+                <div style="grid-column: span 2; color:#f1c40f; margin-top: 5px;">💰 골드: <span id="p-gold">0</span> G</div>
             </div>
             <div class="equipment">
                 무기: <span id="p-weapon" class="highlight">맨주먹</span> <span id="p-enhance" class="damage"></span><br>
@@ -135,20 +179,22 @@
         <div class="stat-panel" id="extra-panel">
             <h3>🎒 가방 및 재화</h3>
             <div id="inventory-list">보유한 아이템이 없습니다.</div>
-            <hr style="border: 0.5px dashed #444; margin: 10px 0;">
-            <p style="font-size: 12px; color: #888; margin: 2px 0;">📜 파괴 방지 주문서: <span id="p-scroll" class="highlight">0</span>장</p>
-            <p style="font-size: 12px; color: #888; margin: 2px 0;">🤝 정예 용병: <span id="p-merc" class="heal">미고용</span></p>
-            <hr style="border: 0.5px dashed #444; margin: 10px 0;">
-            <p style="font-size: 13px; color: #9b59b6; font-weight: bold; margin: 2px 0;">💎 영혼석: <span id="p-soulstone">0</span>개</p>
-            <p style="font-size: 13px; color: #9b59b6; margin: 2px 0;">🌀 환생 횟수: <span id="p-reinc">0</span>회 (스탯 <span id="p-reinc-mult">1.0</span>배)</p>
+            <hr style="border: 1px dashed #444; margin: 10px 0;">
+            <p style="font-size: 14px; color: #888; margin: 2px 0;">📜 파괴 방지 주문서: <span id="p-scroll" class="highlight">0</span>장</p>
+            <p style="font-size: 14px; color: #888; margin: 2px 0;">🤝 정예 용병: <span id="p-merc" class="heal">미고용</span></p>
+            <hr style="border: 1px dashed #444; margin: 10px 0;">
+            <p style="font-size: 15px; color: #9b59b6; margin: 2px 0;">💎 영혼석: <span id="p-soulstone">0</span>개</p>
+            <p style="font-size: 15px; color: #9b59b6; margin: 2px 0;">🌀 환생 횟수: <span id="p-reinc">0</span>회 (스탯 <span id="p-reinc-mult">1.0</span>배)</p>
         </div>
 
         <div class="stat-panel" id="monster-panel">
-            <h3>[<span id="m-floor">1</span>층] <span id="m-name">몬스터</span> <span id="m-trait" class="trait-text"></span></h3>
+            <h3>[<span id="m-floor">1</span>층] <span id="m-name">몬스터</span> <br><span id="m-trait" class="trait-text"></span></h3>
             <div class="stat-grid">
-                <div>HP: <span id="m-hp">0</span> / <span id="m-maxhp">0</span></div>
-                <div>공격력: <span id="m-atk">0</span></div>
-                <div>방어력: <span id="m-def">0</span></div>
+                <div style="grid-column: span 2;">
+                    HP: <div class="bar-container"><div class="bar-fill" id="m-hp-bar"></div><div class="bar-text"><span id="m-hp">0</span> / <span id="m-maxhp">0</span></div></div>
+                </div>
+                <div>⚔️ 공격력: <span id="m-atk">0</span></div>
+                <div>🛡️ 방어력: <span id="m-def">0</span></div>
             </div>
         </div>
     </div>
@@ -157,21 +203,20 @@
 
     <div class="controls">
         <div id="town-actions" class="menu-section active-actions btn-group">
-            
-            <div style="background-color: #2a0808; padding: 10px; border-radius: 5px; border: 1px solid #c0392b; margin-bottom: 5px;">
-                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 5px;">
-                    <button onclick="changeFloor(-1)" style="flex:1; background-color:#222;">◀ 이전 층</button>
-                    <span style="flex:2; color: #f1c40f; font-weight: bold; font-size: 13px;">도전: <span id="target-floor">1</span> / <span id="max-floor-display">1</span>층</span>
-                    <button onclick="changeFloor(1)" style="flex:1; background-color:#222;">다음 층 ▶</button>
+            <div style="background-color: #2a0808; padding: 12px; border: 2px solid #c0392b; margin-bottom: 5px;">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px;">
+                    <button onclick="changeFloor(-1)" style="flex:1;">◀ 이전 층</button>
+                    <span style="flex:2; color: #f1c40f; font-size: 16px;">도전: <span id="target-floor">1</span> / <span id="max-floor-display">1</span>층</span>
+                    <button onclick="changeFloor(1)" style="flex:1;">다음 층 ▶</button>
                 </div>
-                <button onclick="enterTower()" class="tower-btn" style="width: 100%; font-size: 14px; padding: 10px;">🏰 <span id="target-floor-btn">1</span>층 진입하기</button>
+                <button onclick="enterTower()" class="tower-btn" style="width: 100%;">🏰 <span id="target-floor-btn">1</span>층 진입하기</button>
             </div>
             
             <button onclick="rest()">🛏️ 여관 (50G)</button>
             <button onclick="toggleMode('shop')">🏪 무기/방어구 상점</button>
             <button onclick="toggleMode('blacksmith')" class="enhance-btn">🔨 대장간</button>
             <button onclick="toggleMode('npc')" class="npc-btn">🗣️ 마을 광장 (NPC/승급/환생)</button>
-            <button class="system-btn" onclick="backToCharSelect()" style="background-color: #2980b9;">🔄 캐릭터 선택</button>
+            <button class="system-btn" onclick="backToCharSelect()" style="background-color: #2980b9;">🔄 캐릭터 변경</button>
             <button class="system-btn" onclick="logout()" style="background-color: #c0392b;">🚪 로그아웃</button>
         </div>
 
@@ -179,18 +224,18 @@
             <button class="npc-btn" onclick="talkNPC('chief')">👴 촌장 (승급소)</button>
             <button class="npc-btn" onclick="talkNPC('merchant')">🎒 떠돌이 상인 (도박/특별상점)</button>
             <button onclick="toggleMode('petshop')" class="gacha-btn">🐾 펫 부화장</button>
-            <button onclick="toggleMode('reinc')" style="background-color: #8e44ad; font-weight: bold; border-color: #9b59b6;">🔮 환생의 제단</button>
+            <button onclick="toggleMode('reinc')" style="background-color: #8e44ad; border-color: #9b59b6;">🔮 환생의 제단</button>
             <button onclick="attemptAwakening()" class="awake-btn">🩸 심연의 제단 (각성 시도: 1.5%)</button>
             <br>
-            <div id="promote-options" style="display: none; margin-top: 10px; border: 1px dashed #27ae60; padding: 10px;">
+            <div id="promote-options" style="display: none; margin-top: 10px; border: 2px dashed #27ae60; padding: 10px;">
                 <p style="color: #f1c40f; margin:0 0 10px 0;">[전직의 제단] 레벨 10 이상만 승급 가능합니다!</p>
                 <div id="job-choices"></div>
             </div>
-            <button onclick="toggleMode('town')" style="margin-top: 10px;">🔙 마을로</button>
+            <button onclick="toggleMode('town')" style="margin-top: 10px; width:100%;">🔙 마을로</button>
         </div>
 
         <div id="reinc-actions" class="menu-section btn-group">
-            <button onclick="reincarnate()" class="epic" style="font-weight: bold; width: 100%; margin-bottom: 10px; padding: 10px;">🌀 환생하기 (조건: 20층 이상)</button>
+            <button onclick="reincarnate()" class="epic" style="width: 100%; margin-bottom: 10px;">🌀 환생하기 (조건: 20층 이상)</button>
             <div class="grid-menu">
                 <button onclick="upgradeSoul('atk')">🗡️ 공격력 +5 (10개)</button>
                 <button onclick="upgradeSoul('def')">🛡️ 방어력 +5 (10개)</button>
@@ -213,31 +258,33 @@
                 <button onclick="buyEquip('방어구', '드래곤 갑옷', 10000, 120)">🛡️ 드래곤 갑옷 [방+120] (10000G)</button>
             </div>
             <button onclick="hireMercenary()" style="width: 100%; margin-top: 10px;">🤝 정예 용병 고용 [매턴 공+50] (2000G)</button>
-            <button onclick="toggleMode('town')" style="width: 100%;">🔙 마을로</button>
+            <button onclick="toggleMode('town')" style="width: 100%; margin-top: 10px;">🔙 마을로</button>
         </div>
 
         <div id="petshop-actions" class="menu-section btn-group">
-            <button onclick="drawPet()" class="gacha-btn">🥚 알 부화하기 (1500G)</button>
-            <button onclick="toggleMode('npc')">🔙 뒤로</button>
+            <button onclick="drawPet()" class="gacha-btn" style="width:100%;">🥚 알 부화하기 (1500G)</button>
+            <button onclick="toggleMode('npc')" style="width:100%;">🔙 뒤로</button>
         </div>
 
         <div id="blacksmith-actions" class="menu-section btn-group">
-            <p style="font-size: 12px; color: #ff4757; margin: 0 0 5px 0;">경고: +10강 이상 실패 시 무기가 파괴(0강)될 수 있습니다!</p>
-            <label style="font-size: 13px; color: #ccc;"><input type="checkbox" id="use-scroll"> 주문서 사용 (실패/파괴 방지)</label><br>
-            <button onclick="enhanceWeapon()" class="enhance-btn">🔨 무기 강화 (<span id="enhance-cost">200</span>G + 강화석 1개)</button>
-            <button onclick="toggleMode('town')">🔙 마을로</button>
+            <p style="font-size: 14px; color: #ff4757; margin: 0 0 10px 0;">경고: +10강 이상 실패 시 무기가 파괴(0강)될 수 있습니다!</p>
+            <label style="font-size: 15px; color: #ccc; cursor:pointer;"><input type="checkbox" id="use-scroll" style="transform: scale(1.5); margin-right:5px;"> 주문서 사용 (실패/파괴 방지)</label><br><br>
+            <button onclick="enhanceWeapon()" class="enhance-btn" style="width:100%;">🔨 무기 강화 (<span id="enhance-cost">200</span>G + 강화석 1개)</button>
+            <button onclick="toggleMode('town')" style="width:100%; margin-top:10px;">🔙 마을로</button>
         </div>
 
         <div id="combat-actions" class="menu-section btn-group">
-            <button onclick="attack()">⚔️ 공격</button>
-            <button class="skill-btn" onclick="useSkill()">🔥 <span id="skill-name">스킬</span> (MP <span id="skill-cost">10</span>)</button>
-            <button onclick="heal()">🧪 포션</button>
-            <button onclick="runAway()">🏃 도망가기</button>
+            <div class="grid-menu">
+                <button onclick="attack()" style="grid-column: span 2; height: 50px;">⚔️ 기본 공격</button>
+                <button class="skill-btn" onclick="useSkill()">🔥 <span id="skill-name">스킬</span> (MP <span id="skill-cost">10</span>)</button>
+                <button onclick="heal()">🧪 포션 사용</button>
+            </div>
+            <button onclick="runAway()" style="width: 100%; margin-top:8px;">🏃 도망가기</button>
         </div>
 
         <div id="post-combat-actions" class="menu-section btn-group">
-            <button onclick="nextFloor()" class="tower-btn">🔼 다음 층으로 계속</button>
-            <button onclick="toggleMode('town')">🔙 마을로 귀환</button>
+            <button onclick="nextFloor()" class="tower-btn" style="width:100%; height: 50px;">🔼 다음 층으로 계속</button>
+            <button onclick="toggleMode('town')" style="width:100%; margin-top:10px;">🔙 마을로 귀환</button>
         </div>
     </div>
 </div>
@@ -362,7 +409,7 @@
             html += `
             <div class="job-row">
                 <button class="job-btn" style="background-color: ${btnColor};" onclick="selectJob('${job}')">${btnText}</button>
-                <button class="system-btn" style="background-color: #c0392b; height: 44px; opacity: ${opac}; font-weight:bold;" onclick="resetJob('${job}')" ${dis}>초기화</button>
+                <button class="system-btn" style="background-color: #c0392b; width: 80px; opacity: ${opac};" onclick="resetJob('${job}')" ${dis}>초기화</button>
             </div>
             `;
         }
@@ -407,12 +454,10 @@
         showStartScreen();
     }
 
-    // 🔥 이어하기 시 발생하던 잠금 버그 및 데이터 에러 방지 처리 완료
     function resumeGame(jobName) {
         document.getElementById("start-screen").style.display = "none";
         document.getElementById("login-screen").style.display = "none";
         
-        // 과거 데이터 누락 예외 처리
         if(!player.skill) player.skill = jobStats[player.baseJob].skill;
         if(!player.skillCost) player.skillCost = jobStats[player.baseJob].skillCost;
         if(!player.maxFloor) player.maxFloor = player.floor;
@@ -421,9 +466,8 @@
         document.getElementById("skill-cost").innerText = player.skillCost;
         
         isDead = false; 
-        currentMonster = null; // 혹시 전투 중에 강종했더라도 마을에서 재시작하도록 초기화
+        currentMonster = null; 
         
-        // 굳어버린 버튼들 강제 해제
         document.querySelectorAll("button").forEach(b => b.disabled = false);
 
         calcStats(); toggleMode("town"); updateUI(); 
@@ -447,7 +491,7 @@
     }
 
     // ==========================================
-    // 기존 게임 데이터 
+    // 게임 데이터 
     // ==========================================
     let player = {};
     let currentMonster = null;
@@ -569,7 +613,6 @@
         lw.scrollTop = lw.scrollHeight;
     }
 
-    // 🔥 층수 올리고 내리는 파밍용 함수 추가
     function changeFloor(dir) {
         if(!player.maxFloor) player.maxFloor = player.floor;
         let newFloor = player.floor + dir;
@@ -581,6 +624,7 @@
         updateUI();
     }
 
+    // 🔥 게이지 바 폭(width) 계산 추가됨
     function updateUI() {
         if(!player.job) return;
 
@@ -602,14 +646,24 @@
         document.getElementById("p-level").innerText = player.level;
         document.getElementById("p-hp").innerText = player.hp; document.getElementById("p-maxhp").innerText = player.maxHp;
         document.getElementById("p-mp").innerText = player.mp; document.getElementById("p-maxmp").innerText = player.maxMp;
+        document.getElementById("p-exp").innerText = player.exp; document.getElementById("p-maxexp").innerText = player.maxExp;
+        
+        // 게이지 바 퍼센트 적용
+        let hpPct = (player.hp / player.maxHp) * 100;
+        document.getElementById("p-hp-bar").style.width = Math.max(0, hpPct) + "%";
+        
+        let mpPct = player.maxMp > 0 ? (player.mp / player.maxMp) * 100 : 0;
+        document.getElementById("p-mp-bar").style.width = Math.max(0, mpPct) + "%";
+        
+        let expPct = (player.exp / player.maxExp) * 100;
+        document.getElementById("p-exp-bar").style.width = Math.max(0, expPct) + "%";
+
         document.getElementById("p-atk").innerText = player.atk; document.getElementById("p-def").innerText = player.def;
         document.getElementById("p-crit").innerText = player.critRate; document.getElementById("p-evade").innerText = player.evadeRate;
-        document.getElementById("p-exp").innerText = player.exp; document.getElementById("p-maxexp").innerText = player.maxExp;
         document.getElementById("p-gold").innerText = player.gold;
         document.getElementById("p-weapon").innerText = player.weapon; document.getElementById("p-enhance").innerText = player.weaponLevel > 0 ? `(+${player.weaponLevel})` : "";
         document.getElementById("p-armor").innerText = player.armor;
         
-        // 층수 정보 갱신
         document.getElementById("p-maxfloor").innerText = player.maxFloor; 
         if(document.getElementById("target-floor")) {
             document.getElementById("target-floor").innerText = player.floor;
@@ -631,6 +685,11 @@
 
         if (currentMonster) {
             document.getElementById("m-hp").innerText = currentMonster.hp; document.getElementById("m-maxhp").innerText = currentMonster.maxHp;
+            
+            // 몬스터 체력 바 적용
+            let mHpPct = (currentMonster.hp / currentMonster.maxHp) * 100;
+            document.getElementById("m-hp-bar").style.width = Math.max(0, mHpPct) + "%";
+
             document.getElementById("m-atk").innerText = currentMonster.atk; document.getElementById("m-def").innerText = currentMonster.def;
             document.getElementById("m-floor").innerText = player.floor; document.getElementById("m-name").innerText = currentMonster.name;
             document.getElementById("m-trait").innerText = monsterTraits[currentMonster.trait].text;
@@ -694,7 +753,7 @@
             if(player.level < 10) return log(`<span class='npc-chat'>👴 촌장: "레벨 10이 되면 다시 오게나."</span>`);
             document.getElementById("promote-options").style.display = "block";
             let choicesHTML = "";
-            for (let job in jobStats) { if (jobStats[job].pJob === player.job) choicesHTML += `<button class='job-btn' style='width: 48%; margin: 1%;' onclick="promote('${job}')">⭐ ${job}</button>`; }
+            for (let job in jobStats) { if (jobStats[job].pJob === player.job) choicesHTML += `<button class='job-btn' style='width: 48%; margin: 1%; font-size:16px;' onclick="promote('${job}')">⭐ ${job}</button>`; }
             document.getElementById("job-choices").innerHTML = choicesHTML;
         }
     }
@@ -924,8 +983,8 @@
         document.querySelectorAll(".controls button").forEach(b => b.disabled = false);
         
         document.getElementById("post-combat-actions").innerHTML = `
-            <button onclick="nextFloor()" class="tower-btn">🔼 다음 층으로 계속</button>
-            <button onclick="toggleMode('town')">🔙 마을로 귀환</button>
+            <button onclick="nextFloor()" class="tower-btn" style="width:100%; height: 50px;">🔼 다음 층으로 계속</button>
+            <button onclick="toggleMode('town')" style="width:100%; margin-top:10px;">🔙 마을로 귀환</button>
         `;
         
         toggleMode("town");
