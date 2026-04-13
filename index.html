@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>텍스트 RPG: 절망의 탑 (온라인)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>절망의 탑: 리마스터</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -16,22 +17,26 @@
         }
 
         body {
-            background-color: #050505; color: #e0e0e0; 
+            background-color: #000; color: #e0e0e0; 
             font-family: 'NeoDunggeunmo', 'Courier New', monospace;
-            display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;
-            line-height: 1.2; overflow: hidden;
+            margin: 0; padding: 20px 0; 
+            display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh; box-sizing: border-box;
         }
         
-        /* 🔥 레이아웃 전체 확장 */
-        #game-container {
-            width: 1250px; background-color: #111; 
+        #game-wrapper {
+            width: 1000px; /* 화면에 쏙 들어오게 축소 */
+            max-width: 100%;
+            background-color: #111; 
             border: 4px solid #500; 
-            border-radius: 0; padding: 20px; box-shadow: 0 0 40px rgba(255, 0, 0, 0.2);
-            position: relative;
+            padding: 15px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
+            position: relative; box-sizing: border-box;
         }
-        h1 { text-align: center; color: #e74c3c; border-bottom: 4px dashed #622; padding-bottom: 10px; margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
+
+        h1 { text-align: center; color: #e74c3c; border-bottom: 3px dashed #622; padding-bottom: 10px; margin: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; font-size: 24px;}
         
-        #login-screen, #start-screen {
+        /* 팝업 오버레이 */
+        .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.95); display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 50;
@@ -39,90 +44,71 @@
         #start-screen { z-index: 40; display: none; }
         
         .auth-box { background: #1a1a1a; padding: 30px; border: 4px solid #444; text-align: center; }
-        .auth-box input { width: 80%; padding: 12px; margin: 10px 0; background: #000; border: 2px solid #555; color: #fff; font-family: inherit; font-size: 16px;}
-        .save-indicator { font-size: 16px; color: #2ecc71; opacity: 0; transition: opacity 0.5s; font-weight: normal;}
+        .auth-box input { width: 80%; padding: 10px; margin: 10px 0; background: #000; border: 2px solid #555; color: #fff; font-family: inherit; font-size: 16px;}
 
-        #start-screen h2 { color: #f1c40f; margin-bottom: 20px; text-shadow: 2px 2px 0 #000; }
-        .job-btn { font-size: 18px; padding: 12px 20px; width: 300px; background-color: #2c3e50; border: 2px solid #34495e; color: white;}
+        .job-btn { font-size: 16px; padding: 12px 20px; width: 280px; background-color: #2c3e50; border: 2px solid #34495e; color: white;}
         .job-btn:hover { background-color: #34495e; cursor: pointer;}
-        .job-row { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; gap: 5px; }
+        .job-row { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; gap: 5px; }
 
-        /* 🔥 새로운 3단 레이아웃 */
-        .main-layout {
-            display: flex; gap: 15px; margin-top: 15px;
-        }
-        .left-panel { flex: 0 0 320px; display: flex; flex-direction: column; gap: 10px; }
-        .center-panel { flex: 0 0 440px; display: flex; flex-direction: column; align-items: center; }
-        .right-panel { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        /* 🔥 새로운 3단 분리 레이아웃 (반응형/고정 크기) */
+        .main-layout { display: grid; grid-template-columns: 270px 340px 330px; gap: 15px; }
 
-        .stat-panel { background-color: #1a1a1a; padding: 15px; border: 2px solid #333; }
-        .stat-panel h3 { margin-top: 0; color: #3498db; border-bottom: 2px solid #444; padding-bottom: 5px; font-size: 18px; text-shadow: 1px 1px 0 #000;}
+        /* 패널 공통 */
+        .panel { background-color: #1a1a1a; border: 2px solid #333; padding: 12px; box-sizing: border-box;}
+        .panel h3 { margin: 0 0 10px 0; color: #3498db; border-bottom: 2px solid #444; padding-bottom: 5px; font-size: 16px; text-shadow: 1px 1px 0 #000;}
         
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 15px; margin-top: 10px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 14px; }
+        .full-width { grid-column: span 2; }
         
-        .bar-container {
-            width: 100%; height: 18px; background-color: #222; border: 2px solid #000; 
-            position: relative; margin-top: 2px;
-        }
-        .bar-fill { height: 100%; background-color: #e74c3c; width: 100%; transition: width 0.3s ease-out; }
-        .mp-fill { background-color: #3498db; }
-        .exp-fill { background-color: #f1c40f; }
-        .bar-text {
-            position: absolute; top: -1px; left: 0; width: 100%; text-align: center;
-            font-size: 14px; color: #fff;
-            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-        }
+        /* 게이지 바 */
+        .bar-container { width: 100%; height: 16px; background-color: #222; border: 2px solid #000; position: relative; margin-top: 2px; }
+        .bar-fill { height: 100%; background-color: #e74c3c; width: 100%; transition: width 0.2s; }
+        .mp-fill { background-color: #3498db; } .exp-fill { background-color: #f1c40f; }
+        .bar-text { position: absolute; top: -2px; left: 0; width: 100%; text-align: center; font-size: 13px; color: #fff; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;}
 
-        .equipment { margin-top: 15px; padding-top: 10px; border-top: 2px dashed #444; font-size: 14px; color: #bdc3c7; line-height: 1.5;}
-        #inventory-list { font-size: 14px; color: #f39c12; margin-top: 10px; height: 50px; overflow-y: auto;}
+        /* 아이템 및 로그 */
+        .equipment { margin-top: 10px; padding-top: 10px; border-top: 2px dashed #444; font-size: 13px; color: #bdc3c7; line-height: 1.5;}
+        #inventory-list { font-size: 13px; color: #f39c12; margin: 5px 0; height: 50px; overflow-y: auto; background: #000; padding: 5px; border: 1px solid #333;}
         
-        /* 🔥 2D 맵 컨테이너 디자인 */
+        #log-window { height: 130px; background-color: #000; color: #ccc; padding: 10px; border: 2px solid #500; overflow-y: auto; font-size: 14px; line-height: 1.5; margin-top: 10px; }
+        
+        /* 🔥 2D 맵 스타일링 */
+        .map-title { text-align: center; color: #fff; background: #222; padding: 5px; margin: 0 0 10px 0; border: 2px solid #555; font-size: 15px;}
         #map-container {
-            width: 440px; height: 440px; background-color: #1a1a1a; border: 4px solid #555;
-            position: relative; 
-            /* 타일 바닥 무늬 */
-            background-image: linear-gradient(#333 2px, transparent 2px), linear-gradient(90deg, #333 2px, transparent 2px);
-            background-size: 40px 40px;
+            width: 330px; height: 330px; /* 11 x 11 그리드 (각 30px) */
+            position: relative; border: 4px solid #444; box-sizing: content-box;
+            background-size: 30px 30px; margin: 0 auto; overflow: hidden;
         }
+        .map-town { background-color: #1e3a1e; background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px); }
+        .map-dungeon { background-color: #222; background-image: linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px); }
+        
         .entity {
-            position: absolute; width: 40px; height: 40px;
+            position: absolute; width: 30px; height: 30px;
             display: flex; justify-content: center; align-items: center;
-            font-size: 26px; transition: top 0.1s, left 0.1s; user-select: none;
-            text-shadow: 2px 2px 0 rgba(0,0,0,0.8);
+            font-size: 20px; transition: top 0.1s, left 0.1s; user-select: none;
         }
-        .player-entity { z-index: 10; animation: bounce 0.5s infinite alternate; }
+        .player-entity { z-index: 10; animation: bounce 0.5s infinite alternate; text-shadow: 0 0 5px #fff;}
         @keyframes bounce { from { transform: translateY(0px); } to { transform: translateY(-3px); } }
 
-        /* 🔥 모바일용 D-Pad */
-        #dpad {
-            display: grid; grid-template-columns: repeat(3, 50px); gap: 5px; margin-top: 15px;
-            justify-content: center;
-        }
-        #dpad button { height: 50px; padding: 0; font-size: 20px; display:flex; justify-content:center; align-items:center; }
+        /* D-Pad 조이패드 */
+        #dpad { display: grid; grid-template-columns: 50px 50px 50px; gap: 5px; justify-content: center; margin-top: 15px; }
+        #dpad button { height: 40px; padding: 0; font-size: 18px; font-weight: bold; background: #333; border-radius: 5px;}
+        #dpad button:active { background: #555; }
 
-        #log-window {
-            flex: 1; min-height: 200px; background-color: #000; color: #ccc; padding: 15px;
-            border: 4px solid #500; overflow-y: auto; font-size: 15px; line-height: 1.6;
-        }
-        
-        .menu-wrapper { min-height: 250px; background-color: #151515; border: 2px solid #333; padding: 15px; margin-bottom: 10px; }
-        .menu-section { display: none; }
+        /* 메뉴 섹션들 */
+        .menu-wrapper { display: flex; flex-direction: column; gap: 8px;}
+        .menu-section { display: none; background: #151515; border: 2px solid #333; padding: 12px; }
         .active-actions { display: block !important; }
+        .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 
-        .btn-group { display: flex; flex-direction: column; gap: 8px;}
-        .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        
+        /* 버튼 디자인 */
         button {
-            background-color: #222; color: #fff; border: 2px solid #555; padding: 10px 12px;
-            font-size: 15px; cursor: pointer; font-family: inherit;
-            box-shadow: 3px 3px 0px #000; 
-            transition: transform 0.1s, box-shadow 0.1s;
+            background-color: #222; color: #fff; border: 2px solid #555; padding: 8px;
+            font-size: 14px; cursor: pointer; font-family: inherit;
+            box-shadow: 2px 2px 0px #000; transition: transform 0.1s, box-shadow 0.1s;
         }
         button:hover { background-color: #444; border-color: #777;}
-        button:active {
-            transform: translate(3px, 3px); 
-            box-shadow: 0px 0px 0px #000;
-        }
+        button:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
         button:disabled { background-color: #111; color: #444; cursor: not-allowed; border-color: #222; box-shadow: none; transform: none;}
         
         .skill-btn { background-color: #2980b9; border-color: #3498db; }
@@ -131,273 +117,227 @@
         .gacha-btn { background-color: #f39c12; color: #000; border-color: #f1c40f;}
         .tower-btn { background-color: #c0392b; border-color: #e74c3c; font-weight: bold;}
         .npc-btn { background-color: #27ae60; color: white; border-color: #2ecc71;}
-        .awake-btn { background-color: #000; color: #ff0044; border: 2px solid #ff0044; box-shadow: 3px 3px 0px rgba(255,0,68,0.5);}
-        .awake-btn:hover { background-color: #ff0044; color: #fff; }
-        .rift-btn { background-color: #4a235a; color: #f39c12; border-color: #8e44ad; font-weight: bold;}
+        .awake-btn { background-color: #000; color: #ff0044; border: 2px solid #ff0044; }
         
-        .highlight { color: #f1c40f; }
-        .damage { color: #ff4757; }
-        .heal { color: #2ecc71; }
-        .epic { color: #9b59b6; }
-        .awakened-text { color: #ff0044; text-shadow: 0 0 5px #ff0044; }
-        .trait-text { color: #e67e22; font-size: 14px; }
-        .map-title { text-align: center; color: #fff; background: #333; padding: 5px; margin: 0 0 10px 0; border: 2px solid #555; }
+        .highlight { color: #f1c40f; } .damage { color: #ff4757; } .heal { color: #2ecc71; } .epic { color: #9b59b6; }
     </style>
 </head>
 <body>
 
-<div id="game-container">
+<div id="game-wrapper">
     
-    <div id="login-screen">
+    <div id="login-screen" class="overlay">
         <div class="auth-box">
             <h2 style="color: #e74c3c; margin-top:0;">☁️ 절망의 탑 : 온라인</h2>
-            <p style="font-size: 14px; color: #aaa;">이메일과 비밀번호를 입력해 클라우드에 접속하세요.</p>
             <input type="email" id="auth-email" placeholder="이메일 (예: test@game.com)"><br>
             <input type="password" id="auth-pwd" placeholder="비밀번호 (6자리 이상)"><br>
-            
-            <div style="display: flex; gap: 10px; width: 80%; margin: 15px auto 0 auto;">
-                <button class="epic" onclick="handleLogin()" style="flex: 1;">로그인</button>
-                <button class="epic skill-btn" onclick="handleSignUp()" style="flex: 1;">회원가입</button>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                <button class="epic" onclick="handleLogin()" style="width: 120px;">로그인</button>
+                <button class="skill-btn" onclick="handleSignUp()" style="width: 120px;">회원가입</button>
             </div>
-            
-            <p id="auth-msg" style="color: #ff4757; font-size: 14px; margin-top: 10px;"></p>
+            <p id="auth-msg" style="color: #ff4757; font-size: 13px; margin-top: 10px;"></p>
         </div>
     </div>
 
-    <div id="start-screen">
+    <div id="start-screen" class="overlay">
         <div id="job-select-container"></div>
     </div>
 
-    <h1>
-        🏰 절망의 탑 [최고 기록: <span id="p-maxfloor">0</span>층]
-        <span class="save-indicator" id="save-status">☁️ AUTO SAVED</span>
-    </h1>
+    <h1>🏰 절망의 탑 <span style="font-size:14px; color:#aaa;">[최고: <span id="p-maxfloor">0</span>층]</span> <span class="save-indicator" id="save-status">💾 SAVED</span></h1>
 
     <div class="main-layout">
+        
         <div class="left-panel">
-            <div class="stat-panel" id="player-panel">
+            <div class="panel" id="player-panel">
                 <h3>🛡️ <span id="p-job">직업</span> (Lv.<span id="p-level">1</span>)</h3>
                 <div class="stat-grid">
-                    <div style="grid-column: span 2;">HP: <div class="bar-container"><div class="bar-fill" id="p-hp-bar"></div><div class="bar-text"><span id="p-hp">0</span> / <span id="p-maxhp">0</span></div></div></div>
-                    <div style="grid-column: span 2;">MP: <div class="bar-container"><div class="bar-fill mp-fill" id="p-mp-bar"></div><div class="bar-text"><span id="p-mp">0</span> / <span id="p-maxmp">0</span></div></div></div>
-                    <div style="grid-column: span 2;">EXP: <div class="bar-container"><div class="bar-fill exp-fill" id="p-exp-bar"></div><div class="bar-text"><span id="p-exp">0</span> / <span id="p-maxexp">0</span></div></div></div>
+                    <div class="full-width">HP: <div class="bar-container"><div class="bar-fill" id="p-hp-bar"></div><div class="bar-text"><span id="p-hp">0</span> / <span id="p-maxhp">0</span></div></div></div>
+                    <div class="full-width">MP: <div class="bar-container"><div class="bar-fill mp-fill" id="p-mp-bar"></div><div class="bar-text"><span id="p-mp">0</span> / <span id="p-maxmp">0</span></div></div></div>
+                    <div class="full-width">EXP: <div class="bar-container"><div class="bar-fill exp-fill" id="p-exp-bar"></div><div class="bar-text"><span id="p-exp">0</span> / <span id="p-maxexp">0</span></div></div></div>
                     <div>⚔️ 공격력: <span id="p-atk">0</span></div>
                     <div>🛡️ 방어력: <span id="p-def">0</span></div>
-                    <div>⚡ 스피드: <span id="p-speed" class="epic">0</span></div>
-                    <div>🌪️ 연격: <span id="p-combo" class="epic">0</span>%</div>
-                    <div>🎯 크리티컬: <span id="p-crit">0</span>%</div>
+                    <div>⚡ 스피드: <span id="p-speed" class="highlight">0</span></div>
+                    <div>🌪️ 연격: <span id="p-combo" class="highlight">0</span>%</div>
+                    <div>🎯 치명타: <span id="p-crit">0</span>%</div>
                     <div>💨 회피율: <span id="p-evade">0</span>%</div>
-                    <div style="grid-column: span 2; color:#f1c40f; margin-top: 5px;">💰 골드: <span id="p-gold">0</span> G</div>
+                    <div class="full-width highlight" style="margin-top: 5px;">💰 골드: <span id="p-gold">0</span> G</div>
                 </div>
                 <div class="equipment">
                     무기: <span id="p-weapon" class="highlight">맨주먹</span> <span id="p-enhance" class="damage"></span><br>
                     방어구: <span id="p-armor" class="highlight">평상복</span><br>
-                    유물: <span id="p-relic" style="color: #00ffff; font-weight:bold; text-shadow: 0 0 5px rgba(0,255,255,0.5);">+0 단계</span><br>
+                    유물: <span id="p-relic" style="color:#00ffff;">+0 단계</span><br>
                     펫: <span id="p-pet" class="epic">없음</span><br>
                     🧪 포션: <span id="p-potion">3</span> 개
                 </div>
             </div>
 
-            <div class="stat-panel" id="extra-panel">
-                <h3>🎒 재화 및 특수</h3>
+            <div class="panel" style="margin-top: 10px;">
+                <h3>🎒 가방 및 재화</h3>
                 <div id="inventory-list">보유한 아이템이 없습니다.</div>
-                <p style="font-size: 13px; color: #888; margin: 5px 0 2px 0;">📜 보호 주문서: <span id="p-scroll" class="highlight">0</span>장</p>
-                <p style="font-size: 13px; color: #888; margin: 2px 0;">🤝 정예 용병: <span id="p-merc" class="heal">미고용</span></p>
-                <hr style="border: 1px dashed #444; margin: 10px 0;">
-                <p style="font-size: 14px; color: #9b59b6; margin: 2px 0;">💎 영혼석: <span id="p-soulstone">0</span>개</p>
-                <p style="font-size: 14px; color: #9b59b6; margin: 2px 0;">🌀 환생 횟수: <span id="p-reinc">0</span>회 (스탯 <span id="p-reinc-mult">1.0</span>배)</p>
+                <p style="font-size: 13px; color: #aaa; margin: 2px 0;">📜 파괴 방지 주문서: <span id="p-scroll" class="highlight">0</span>장</p>
+                <p style="font-size: 13px; color: #aaa; margin: 2px 0;">🤝 정예 용병: <span id="p-merc" class="heal">미고용</span></p>
+                <p style="font-size: 13px; color: #9b59b6; margin: 2px 0;">💎 영혼석: <span id="p-soulstone">0</span>개 / 🌀 환생: <span id="p-reinc">0</span>회</p>
             </div>
         </div>
 
         <div class="center-panel">
-            <h3 class="map-title" id="map-title-display">🗺️ 마을 광장</h3>
-            <div id="map-container">
+            <div class="map-title" id="map-title-display">🗺️ 마을 광장</div>
+            
+            <div id="map-container" class="map-town">
                 </div>
             
             <div id="dpad">
                 <div></div><button onclick="movePlayer(0,-1)">▲</button><div></div>
                 <button onclick="movePlayer(-1,0)">◀</button><button onclick="movePlayer(0,1)">▼</button><button onclick="movePlayer(1,0)">▶</button>
             </div>
-        </div>
-
-        <div class="right-panel">
-            <div class="menu-wrapper">
-                
-                <div id="map-actions" class="menu-section active-actions">
-                    <h3 style="color:#2ecc71; margin-top:0; text-align:center;">탐험 모드</h3>
-                    <p style="text-align:center; color:#ccc; line-height:1.6; margin-top: 30px;">
-                        키보드 방향키 또는 <br>W,A,S,D로 이동하세요.<br><br>
-                        아이콘에 몸을 부딪히면<br>상호작용이 시작됩니다!
-                    </p>
-                    <div style="margin-top: 50px; display:flex; gap: 5px;">
-                        <button class="system-btn" onclick="backToCharSelect()" style="flex:1; background-color: #2980b9;">🔄 캐릭터 변경</button>
-                        <button class="system-btn" onclick="logout()" style="flex:1; background-color: #c0392b;">🚪 로그아웃</button>
-                    </div>
-                </div>
-
-                <div id="inn-actions" class="menu-section btn-group">
-                    <h3 style="color:#3498db; margin-top:0;">🛏️ 푹신한 여관</h3>
-                    <p>피로를 풀고 체력과 마나를 전부 회복하시겠습니까?</p>
-                    <button onclick="rest()" class="heal" style="height:50px;">휴식하기 (비용: <span id="inn-cost">50</span>G)</button>
-                    <button onclick="enterMapMode()" style="margin-top:20px;">🔙 지도로 돌아가기</button>
-                </div>
-
-                <div id="combat-actions" class="menu-section btn-group">
-                    <div class="stat-panel" style="background-color:#2a0808; border-color:#c0392b; margin-bottom:10px; padding:10px;">
-                        <h3 style="color:#ff4757; margin-top:0; font-size:16px;">[<span id="m-floor">1</span>층] <span id="m-name">몬스터</span></h3>
-                        <span id="m-trait" class="trait-text"></span>
-                        <div class="stat-grid" style="margin-top:5px;">
-                            <div style="grid-column: span 2;">HP: <div class="bar-container"><div class="bar-fill" id="m-hp-bar"></div><div class="bar-text"><span id="m-hp">0</span> / <span id="m-maxhp">0</span></div></div></div>
-                            <div>⚔️ 공: <span id="m-atk">0</span></div>
-                            <div>🛡️ 방: <span id="m-def">0</span></div>
-                            <div style="grid-column: span 2;">⚡ 속도: <span id="m-speed" class="epic">0</span></div>
-                        </div>
-                    </div>
-                    <div class="grid-menu">
-                        <button onclick="startTurn('attack')" style="grid-column: span 2; height: 50px;">⚔️ 기본 공격</button>
-                        <button class="skill-btn" onclick="startTurn('skill')">🔥 <span id="skill-name">스킬</span> (MP <span id="skill-cost">10</span>)</button>
-                        <button onclick="startTurn('heal')">🧪 포션 사용</button>
-                    </div>
-                    <button onclick="startTurn('run')" style="width: 100%; margin-top:8px;">🏃 도망치기 (실패 시 피격)</button>
-                </div>
-
-                <div id="shop-actions" class="menu-section btn-group">
-                    <h3 style="color:#f1c40f; margin-top:0;">🏪 잡화 상점</h3>
-                    <div class="grid-menu">
-                        <button onclick="buyPotion()">🧪 포션 (50G)</button>
-                        <button onclick="buyItem('scroll', 2000)">📜 파괴 방지 주문서 (2000G)</button>
-                        <button onclick="buyEquip('무기', '철검', 500, 15)">🗡️ 철검 [공+15] (500G)</button>
-                        <button onclick="buyEquip('방어구', '가죽 갑옷', 500, 10)">🛡️ 가죽갑옷 [방+10] (500G)</button>
-                        <button onclick="buyEquip('무기', '미스릴검', 4000, 70)">🗡️ 미스릴 [공+70] (4000G)</button>
-                        <button onclick="buyEquip('방어구', '판금 갑옷', 4000, 50)">🛡️ 판금갑옷 [방+50] (4000G)</button>
-                        <button onclick="buyEquip('무기', '초합금검', 10000, 150)">🗡️ 초합금 [공+150] (1만G)</button>
-                        <button onclick="buyEquip('방어구', '드래곤', 10000, 120)">🛡️ 드래곤갑옷 [방+120] (1만G)</button>
-                    </div>
-                    <button onclick="hireMercenary()" style="width: 100%; margin-top: 5px;">🤝 정예 용병 고용 [매턴 공+50] (2000G)</button>
-                    <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 지도로 돌아가기</button>
-                </div>
-
-                <div id="blacksmith-actions" class="menu-section btn-group">
-                    <h3 style="color:#d35400; margin-top:0;">🔨 대장간</h3>
-                    <p style="font-size: 13px; color: #ff4757; margin: 0 0 10px 0;">경고: +10강 이상 실패 시 무기가 파괴(0강)될 수 있습니다!</p>
-                    <label style="font-size: 15px; color: #ccc; cursor:pointer;"><input type="checkbox" id="use-scroll" style="transform: scale(1.5); margin-right:5px;"> 주문서 사용 (실패/파괴 방지)</label><br>
-                    <button onclick="enhanceWeapon()" class="enhance-btn" style="width:100%; height:50px;">🔨 무기 강화 (<span id="enhance-cost">200</span>G + 강화석 1개)</button>
-                    <button onclick="enterMapMode()" style="width:100%; margin-top:20px;">🔙 지도로 돌아가기</button>
-                </div>
-
-                <div id="npc-actions" class="menu-section btn-group">
-                    <h3 style="color:#27ae60; margin-top:0;">👴 마을 촌장</h3>
-                    <button class="npc-btn" onclick="document.getElementById('promote-options').style.display='block';">⭐ 전직소 (Lv.10 이상)</button>
-                    <div id="promote-options" style="display: none; border: 2px dashed #27ae60; padding: 10px;">
-                        <div id="job-choices"></div>
-                    </div>
-                    <button onclick="document.getElementById('pet-options').style.display='block';" class="gacha-btn">🐾 펫 부화장</button>
-                    <div id="pet-options" style="display: none; border: 2px dashed #f1c40f; padding: 10px;">
-                        <button onclick="drawPet()" style="width:100%; color:#000; background:#f1c40f;">🥚 알 부화하기 (1000G)</button>
-                    </div>
-                    <button onclick="document.getElementById('reinc-options').style.display='block';" style="background-color: #8e44ad; border-color: #9b59b6;">🔮 환생의 제단</button>
-                    <div id="reinc-options" style="display: none; border: 2px dashed #9b59b6; padding: 10px;">
-                        <button onclick="reincarnate()" class="epic" style="width:100%;">🌀 환생하기 (20층 이상)</button>
-                        <div class="grid-menu" style="margin-top:5px;">
-                            <button onclick="upgradeSoul('atk')">공+5(10개)</button>
-                            <button onclick="upgradeSoul('def')">방+5(10개)</button>
-                            <button onclick="upgradeSoul('hp')" style="grid-column:span 2;">최대체력+50(10개)</button>
-                        </div>
-                    </div>
-                    <button onclick="enterMapMode()" style="margin-top: 10px; width:100%;">🔙 지도로 돌아가기</button>
-                </div>
-
-                <div id="rift-actions" class="menu-section btn-group">
-                    <h3 style="color:#9b59b6; margin-top:0; text-shadow: 1px 1px 0 #000;">🌌 차원의 틈</h3>
-                    <button onclick="enterRaid()" class="epic" style="width:100%; height:50px; font-size:16px; margin-bottom:10px; background-color:#4a235a; border-color:#8e44ad;">🐉 심연의 마룡 토벌전 (10턴 딜링)</button>
-                    
-                    <div style="background-color: #111; padding: 10px; border: 2px solid #00ffff; box-shadow: 0 0 10px rgba(0,255,255,0.2);">
-                        <h4 style="margin:0 0 5px 0; color:#00ffff;">🔮 초월 유물 (현재 <span id="relic-level-ui">0</span>단계)</h4>
-                        <p style="font-size:12px; color:#aaa; margin:0 0 10px 0;">공+20, 방+10, 체+100, 속+2, 치명+0.5%, 연격+0.5% 영구증가</p>
-                        <button onclick="upgradeRelic()" class="awake-btn" style="width:100%;">⚡ 유물 무한 강화 (<span id="relic-cost-ui">100,000</span>G)</button>
-                    </div>
-                    <button onclick="attemptAwakening()" class="awake-btn" style="margin-top:5px;">🩸 심연의 제단 (각성 1.5% 도박)</button>
-                    <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 지도로 돌아가기</button>
-                </div>
-
-                <div id="tower-entrance-actions" class="menu-section btn-group">
-                    <h3 style="color:#c0392b; margin-top:0;">🏰 절망의 탑 입구</h3>
-                    <p style="font-size: 14px; color: #ccc;">도전할 층수를 선택하세요.</p>
-                    <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 15px; background: #222; padding:10px;">
-                        <button onclick="changeFloor(-1)" style="flex:1;">◀ 이전 층</button>
-                        <span style="flex:2; color: #f1c40f; font-size: 16px; text-align:center;">도전: <span id="target-floor">1</span> / <span id="max-floor-display">1</span>층</span>
-                        <button onclick="changeFloor(1)" style="flex:1;">다음 층 ▶</button>
-                    </div>
-                    <button onclick="enterTower()" class="tower-btn" style="width: 100%; height: 50px;">🚀 <span id="target-floor-btn">1</span>층으로 진입하기</button>
-                    <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 지도로 돌아가기</button>
-                </div>
-
-                <div id="post-combat-actions" class="menu-section btn-group">
-                    </div>
-
-            </div>
             
             <div id="log-window"></div>
+        </div>
+
+        <div class="right-panel menu-wrapper">
+            
+            <div id="map-actions" class="menu-section active-actions">
+                <h3 style="color:#2ecc71; margin-top:0; text-align:center;">탐험 모드</h3>
+                <p style="text-align:center; color:#ccc; line-height:1.6; margin-top: 20px;">
+                    키보드 방향키 또는 <br>W, A, S, D로 이동하세요.<br><br>
+                    아이콘에 몸을 부딪히면<br>이벤트가 발생합니다!
+                </p>
+                <div style="margin-top: 30px; display:flex; gap: 5px;">
+                    <button onclick="backToCharSelect()" style="flex:1; background-color: #2980b9;">캐릭터 변경</button>
+                    <button onclick="logout()" style="flex:1; background-color: #c0392b;">로그아웃</button>
+                </div>
+            </div>
+
+            <div id="tower-entrance-actions" class="menu-section">
+                <h3 style="color:#c0392b; margin-top:0;">🏰 절망의 탑 입구</h3>
+                <p style="font-size: 13px; color: #ccc;">도전할 층수를 선택하세요.</p>
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px; background: #000; padding:8px;">
+                    <button onclick="changeFloor(-1)" style="flex:1; padding:5px;">◀</button>
+                    <span style="flex:2; color: #f1c40f; text-align:center; font-size:14px;"><span id="target-floor">1</span> / <span id="max-floor-display">1</span>층</span>
+                    <button onclick="changeFloor(1)" style="flex:1; padding:5px;">▶</button>
+                </div>
+                <button onclick="enterTower()" class="tower-btn" style="width: 100%; height: 40px;">🚀 <span id="target-floor-btn">1</span>층 진입</button>
+                <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 뒤로가기</button>
+            </div>
+
+            <div id="combat-actions" class="menu-section">
+                <div class="panel" style="background-color:#2a0808; border-color:#c0392b; margin-bottom:10px; padding:10px;">
+                    <h3 style="color:#ff4757; margin:0 0 5px 0; font-size:15px;">[<span id="m-floor">1</span>층] <span id="m-name">몬스터</span></h3>
+                    <span id="m-trait" style="color:#e67e22; font-size:12px;"></span>
+                    <div class="stat-grid" style="margin-top:5px;">
+                        <div class="full-width">HP: <div class="bar-container"><div class="bar-fill" id="m-hp-bar"></div><div class="bar-text"><span id="m-hp">0</span> / <span id="m-maxhp">0</span></div></div></div>
+                        <div>⚔️ 공: <span id="m-atk">0</span></div>
+                        <div>🛡️ 방: <span id="m-def">0</span></div>
+                        <div class="full-width highlight">⚡ 속도: <span id="m-speed">0</span></div>
+                    </div>
+                </div>
+                <div class="grid-menu">
+                    <button onclick="startTurn('attack')" style="grid-column: span 2; height: 45px;">⚔️ 기본 공격</button>
+                    <button class="skill-btn" onclick="startTurn('skill')">🔥 <span id="skill-name">스킬</span> (-<span id="skill-cost">10</span>)</button>
+                    <button onclick="startTurn('heal')" class="npc-btn">🧪 포션 사용</button>
+                </div>
+                <button onclick="startTurn('run')" style="width: 100%; margin-top:8px;">🏃 도망치기 (실패 시 피격)</button>
+            </div>
+
+            <div id="shop-actions" class="menu-section">
+                <h3 style="color:#f1c40f; margin-top:0;">🏪 잡화 상점</h3>
+                <div class="grid-menu" style="font-size:12px;">
+                    <button onclick="buyPotion()">🧪 포션 (50G)</button>
+                    <button onclick="buyItem('scroll', 2000)">📜 파괴방지 (2천G)</button>
+                    <button onclick="buyEquip('무기', '강철검', 1500, 35)">🗡️ 강철검 (1500G)</button>
+                    <button onclick="buyEquip('방어구', '사슬갑옷', 1500, 25)">🛡️ 사슬갑옷 (1500G)</button>
+                    <button onclick="buyEquip('무기', '초합금검', 10000, 150)">🗡️ 초합금검 (1만G)</button>
+                    <button onclick="buyEquip('방어구', '드래곤', 10000, 120)">🛡️ 드래곤갑옷 (1만G)</button>
+                </div>
+                <button onclick="hireMercenary()" style="width: 100%; margin-top: 10px;">🤝 정예 용병 고용 [매턴 공+50] (2000G)</button>
+                <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 뒤로가기</button>
+            </div>
+
+            <div id="inn-actions" class="menu-section">
+                <h3 style="color:#3498db; margin-top:0;">🛏️ 여관</h3>
+                <button onclick="rest()" style="width:100%; height:50px; color:#2ecc71; border-color:#2ecc71;">휴식하기 (<span id="inn-cost">50</span>G)</button>
+                <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 뒤로가기</button>
+            </div>
+
+            <div id="blacksmith-actions" class="menu-section">
+                <h3 style="color:#d35400; margin-top:0;">🔨 대장간</h3>
+                <p style="font-size:12px; color:#ff4757;">+10강 이상 실패 시 파괴될 수 있습니다.</p>
+                <label style="font-size:13px; color:#ccc;"><input type="checkbox" id="use-scroll"> 주문서 사용 (파괴방지)</label><br>
+                <button onclick="enhanceWeapon()" class="enhance-btn" style="width:100%; height:45px; margin-top:10px;">무기 강화 (<span id="enhance-cost">200</span>G + 강화석1)</button>
+                <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 뒤로가기</button>
+            </div>
+
+            <div id="npc-actions" class="menu-section">
+                <h3 style="color:#27ae60; margin-top:0;">👴 촌장 (종합 관리)</h3>
+                <button class="npc-btn" onclick="document.getElementById('promote-options').style.display='block';" style="width:100%; margin-bottom:5px;">⭐ 전직소 (Lv.10)</button>
+                <div id="promote-options" style="display: none; border: 1px dashed #27ae60; padding: 5px; margin-bottom:5px;"><div id="job-choices" class="grid-menu"></div></div>
+                
+                <button onclick="drawPet()" class="gacha-btn" style="width:100%; margin-bottom:5px;">🐾 알 부화하기 (1000G)</button>
+                
+                <button onclick="document.getElementById('reinc-options').style.display='block';" style="width:100%; background:#8e44ad;">🔮 환생 및 영혼 강화</button>
+                <div id="reinc-options" style="display: none; border: 1px dashed #9b59b6; padding: 5px; margin-top:5px;">
+                    <button onclick="reincarnate()" style="width:100%; color:#f1c40f;">🌀 환생 (20층 이상)</button>
+                    <div class="grid-menu" style="margin-top:5px;">
+                        <button onclick="upgradeSoul('atk')">공+5(10개)</button> <button onclick="upgradeSoul('def')">방+5(10개)</button>
+                        <button onclick="upgradeSoul('hp')" class="full-width">체력+50 (10개)</button>
+                    </div>
+                </div>
+                <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 뒤로가기</button>
+            </div>
+
+            <div id="rift-actions" class="menu-section">
+                <h3 style="color:#9b59b6; margin-top:0;">🌌 차원의 틈</h3>
+                <button onclick="enterRaid()" style="width:100%; height:45px; background:#4a235a; color:#f1c40f; border-color:#8e44ad; margin-bottom:10px;">🐉 마룡 토벌전 (10턴)</button>
+                
+                <div style="background:#111; padding:8px; border:1px solid #00ffff;">
+                    <h4 style="margin:0 0 5px 0; color:#00ffff;">🔮 유물 강화 (+<span id="relic-level-ui">0</span>)</h4>
+                    <button onclick="upgradeRelic()" style="width:100%; border-color:#00ffff; color:#00ffff;">⚡ 스탯 누적 (<span id="relic-cost-ui">10만</span>G)</button>
+                </div>
+                <button onclick="attemptAwakening()" class="awake-btn" style="width:100%; margin-top:10px;">🩸 제단 (각성 1.5%)</button>
+                <button onclick="enterMapMode()" style="width: 100%; margin-top: 10px;">🔙 뒤로가기</button>
+            </div>
+
+            <div id="post-combat-actions" class="menu-section">
+                </div>
+
         </div>
     </div>
 </div>
 
 <script>
     // ==========================================
-    // 🔥 FIREBASE 온라인 서버 연동 설정 🔥
+    // 1. 서버 연동 및 초기 설정
     // ==========================================
     const firebaseConfig = {
-        apiKey: "AIzaSyCgULo_Mfwn6K4v-AxeC3r7p8ucwwPJd0Q",
-        authDomain: "myrpg-9b043.firebaseapp.com",
-        projectId: "myrpg-9b043",
-        storageBucket: "myrpg-9b043.firebasestorage.app",
-        messagingSenderId: "907651957003",
-        appId: "1:907651957003:web:3b865807c72f07e3e0e20e"
+        apiKey: "AIzaSyCgULo_Mfwn6K4v-AxeC3r7p8ucwwPJd0Q", authDomain: "myrpg-9b043.firebaseapp.com",
+        projectId: "myrpg-9b043", storageBucket: "myrpg-9b043.firebasestorage.app",
+        messagingSenderId: "907651957003", appId: "1:907651957003:web:3b865807c72f07e3e0e20e"
     };
-
-    let isCloudMode = false;
-    let currentUserEmail = "";
-    let autoSaveTimer = null;
-    let cloudSaves = {}; 
-
-    try { firebase.initializeApp(firebaseConfig); isCloudMode = true; } 
-    catch(e) { console.log("Firebase 연동 에러:", e); }
+    let isCloudMode = false; let currentUserEmail = ""; let autoSaveTimer = null; let cloudSaves = {}; 
+    try { firebase.initializeApp(firebaseConfig); isCloudMode = true; } catch(e) { console.log(e); }
 
     function handleLogin() {
-        const email = document.getElementById("auth-email").value;
-        const pwd = document.getElementById("auth-pwd").value;
-        const msg = document.getElementById("auth-msg");
-        if(email.length < 5 || pwd.length < 6) { msg.innerText = "정보를 확인해주세요."; return; }
-        currentUserEmail = email; msg.style.color = "#ff4757"; msg.innerText = "서버 연결 중...";
-        if(isCloudMode) {
-            firebase.auth().signInWithEmailAndPassword(email, pwd).then(userCredential => loadCloudData(userCredential.user.uid))
-            .catch(error => msg.innerText = "가입되지 않은 이메일이거나 비밀번호가 틀렸습니다.");
-        }
+        const e = document.getElementById("auth-email").value; const p = document.getElementById("auth-pwd").value;
+        const m = document.getElementById("auth-msg");
+        if(e.length < 5 || p.length < 6) return m.innerText = "정보를 확인해주세요.";
+        m.style.color = "#ff4757"; m.innerText = "서버 연결 중...";
+        if(isCloudMode) firebase.auth().signInWithEmailAndPassword(e, p).then(u => loadCloudData(u.user.uid)).catch(err => m.innerText = "로그인 실패");
     }
 
     function handleSignUp() {
-        const email = document.getElementById("auth-email").value;
-        const pwd = document.getElementById("auth-pwd").value;
-        const msg = document.getElementById("auth-msg");
-        if(email.length < 5 || pwd.length < 6) { msg.style.color = "#ff4757"; msg.innerText = "정보를 확인해주세요."; return; }
-        currentUserEmail = email; msg.style.color = "#f1c40f"; msg.innerText = "계정 생성 중...";
-        if(isCloudMode) {
-            firebase.auth().createUserWithEmailAndPassword(email, pwd).then(userCredential => {
-                msg.style.color = "#2ecc71"; msg.innerText = "회원가입 완료!";
-                setTimeout(() => loadCloudData(userCredential.user.uid), 1500); 
-            }).catch(error => msg.innerText = "이미 가입되었거나 에러가 발생했습니다.");
-        }
+        const e = document.getElementById("auth-email").value; const p = document.getElementById("auth-pwd").value;
+        const m = document.getElementById("auth-msg");
+        if(e.length < 5 || p.length < 6) return m.innerText = "정보를 확인해주세요.";
+        m.style.color = "#f1c40f"; m.innerText = "계정 생성 중...";
+        if(isCloudMode) firebase.auth().createUserWithEmailAndPassword(e, p).then(u => { m.style.color = "#2ecc71"; m.innerText = "가입 완료!"; setTimeout(()=>loadCloudData(u.user.uid), 1500); }).catch(err => m.innerText = "가입 실패");
     }
 
     function logout() { if(isCloudMode) firebase.auth().signOut(); location.reload(); }
 
     function loadCloudData(uid) {
         firebase.firestore().collection("rpg_saves").doc(uid).get().then((doc) => {
-            if (doc.exists) {
-                let data = doc.data();
-                if (data.player && !data["전사"]) { let job = data.player.baseJob; cloudSaves = {}; cloudSaves[job] = data; } 
-                else { cloudSaves = data || {}; }
-            } else { cloudSaves = {}; }
+            if (doc.exists) { let d = doc.data(); cloudSaves = (d.player && !d["전사"]) ? {[d.player.baseJob]: d} : (d || {}); } 
+            else cloudSaves = {};
             showStartScreen();
         });
     }
@@ -405,54 +345,33 @@
     function showStartScreen() {
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("start-screen").style.display = "flex";
-        
-        const jobs = ['전사', '마법사', '도적', '궁수'];
-        const icons = ['🛡️', '🔮', '🗡️', '🏹'];
-        let html = "<h2>⚔️ 직업 선택 및 이어하기 ⚔️</h2>";
-        
-        for(let i=0; i<jobs.length; i++) {
-            let job = jobs[i]; let isSaved = cloudSaves[job] ? true : false;
-            let btnText = isSaved ? `${icons[i]} ${job} (이어하기)` : `${icons[i]} ${job} (새 시작)`;
-            html += `<div class="job-row">
-                <button class="job-btn" style="background-color: ${isSaved?'#27ae60':'#2c3e50'};" onclick="selectJob('${job}')">${btnText}</button>
-                <button class="system-btn" style="background-color:#c0392b; width:80px; opacity:${isSaved?'1':'0.5'};" onclick="resetJob('${job}')" ${isSaved?'':'disabled'}>초기화</button>
-            </div>`;
-        }
+        let html = "<h2>⚔️ 캐릭터 선택 ⚔️</h2>";
+        const jobs = ['전사', '마법사', '도적', '궁수']; const icons = ['🛡️', '🔮', '🗡️', '🏹'];
+        jobs.forEach((j, i) => {
+            let sv = cloudSaves[j] ? true : false;
+            html += `<div class="job-row"><button class="job-btn" style="background:${sv?'#27ae60':'#2c3e50'};" onclick="selectJob('${j}')">${icons[i]} ${j} ${sv?'(이어하기)':'(새 시작)'}</button><button onclick="resetJob('${j}')" style="background:#c0392b;" ${sv?'':'disabled'}>삭제</button></div>`;
+        });
         document.getElementById("job-select-container").innerHTML = html;
     }
 
-    function selectJob(jobName) {
-        if (cloudSaves[jobName]) {
-            let parsed = cloudSaves[jobName];
-            player = parsed.player; baseWeaponAtk = parsed.baseW || 0; baseArmorDef = parsed.baseA || 0;
+    function selectJob(j) {
+        if(cloudSaves[j]) {
+            let p = cloudSaves[j]; player = p.player; baseWeaponAtk = p.baseW || 0; baseArmorDef = p.baseA || 0;
             if(!player.relicLevel) player.relicLevel = 0; if(!player.reincarnation) player.reincarnation = 0;
-            resumeGame(jobName);
-        } else { startGame(jobName); }
+            resumeGame(j);
+        } else startGame(j);
     }
-
-    function resetJob(jobName) {
-        if (confirm(`정말로 [${jobName}] 직업의 데이터를 초기화하시겠습니까?`)) {
-            delete cloudSaves[jobName]; 
-            if(isCloudMode) firebase.firestore().collection("rpg_saves").doc(firebase.auth().currentUser.uid).set(cloudSaves);
-            showStartScreen(); 
-        }
+    
+    function resetJob(j) {
+        if(confirm(`[${j}] 데이터를 삭제할까요?`)) { delete cloudSaves[j]; if(isCloudMode) firebase.firestore().collection("rpg_saves").doc(firebase.auth().currentUser.uid).set(cloudSaves); showStartScreen(); }
     }
-
     function backToCharSelect() { autoSave(); document.getElementById("log-window").innerHTML = ""; showStartScreen(); }
 
-    function resumeGame(jobName) {
-        document.getElementById("start-screen").style.display = "none";
-        document.getElementById("login-screen").style.display = "none";
-        if(!player.skill) player.skill = jobStats[player.baseJob].skill;
-        if(!player.skillCost) player.skillCost = jobStats[player.baseJob].skillCost;
-        if(!player.maxFloor) player.maxFloor = player.floor;
-        
-        isDead = false; isRaidMode = false; currentMonster = null; 
-        document.querySelectorAll("button").forEach(b => b.disabled = false);
-
-        calcStats(); updateUI(); 
-        log(`<b><span class='epic'>☁️ [${jobName}] 데이터 동기화 완료!</span></b>`); 
-        loadTownMap(); // 맵으로 진입
+    function resumeGame(j) {
+        document.getElementById("start-screen").style.display = "none"; document.getElementById("login-screen").style.display = "none";
+        if(!player.skill) player.skill = jobStats[player.baseJob].skill; if(!player.maxFloor) player.maxFloor = player.floor;
+        isDead = false; isRaidMode = false; currentMonster = null; document.querySelectorAll("button").forEach(b => b.disabled = false);
+        calcStats(); updateUI(); log(`<span class='epic'>☁️ [${j}] 동기화 완료!</span>`); loadTownMap();
     }
 
     function autoSave() {
@@ -461,15 +380,14 @@
         autoSaveTimer = setTimeout(() => {
             cloudSaves[player.baseJob] = { player: player, baseW: baseWeaponAtk, baseA: baseArmorDef }; 
             if(isCloudMode) firebase.firestore().collection("rpg_saves").doc(firebase.auth().currentUser.uid).set(cloudSaves);
-            const ind = document.getElementById("save-status"); ind.style.opacity = 1; setTimeout(() => ind.style.opacity = 0, 1500);
+            const i = document.getElementById("save-status"); i.style.opacity = 1; setTimeout(() => i.style.opacity = 0, 1500);
         }, 1000);
     }
 
     // ==========================================
-    // 게임 데이터 
+    // 2. 게임 기본 데이터
     // ==========================================
-    let player = {};
-    let currentMonster = null;
+    let player = {}; let currentMonster = null; let currentInteractingEntity = null;
     let isDead = false; let baseWeaponAtk = 0; let baseArmorDef = 0;
     let isRaidMode = false; let raidTurn = 0; let totalRaidDmg = 0;
 
@@ -487,203 +405,191 @@
         '저격수':   { pJob: '궁수', hpBonus: 90, mpBonus: 60, atkBonus: 50, defBonus: 10, critBonus: 40, evadeBonus: 5, speedBonus: 5, comboBonus: 5, skill: "헤드샷", skillCost: 35 },
         '레인저':   { pJob: '궁수', hpBonus: 120, mpBonus: 60, atkBonus: 35, defBonus: 20, critBonus: 15, evadeBonus: 20, speedBonus: 12, comboBonus: 15, skill: "폭풍우", skillCost: 30 }
     };
-
     const petDB = [
-        { name: "슬라임 (일반)", atk: 0, def: 0, crit: 0, evade: 0, hpRegen: 10, desc: "매턴 HP 10 회복" },
-        { name: "전투 늑대 (희귀)", atk: 20, def: 5, crit: 5, evade: 0, hpRegen: 0, desc: "공+20, 방+5, 크리+5%" },
-        { name: "황금 박쥐 (희귀)", atk: 0, def: 0, crit: 0, evade: 15, hpRegen: 0, desc: "회피율 +15%" },
-        { name: "아기 드래곤 (영웅)", atk: 50, def: 20, crit: 10, evade: 5, hpRegen: 20, desc: "공+50, 방+20, 매턴 20 회복" }
+        { name: "슬라임", atk: 0, def: 0, crit: 0, evade: 0, hpRegen: 10 }, { name: "전투늑대", atk: 20, def: 5, crit: 5, evade: 0, hpRegen: 0 },
+        { name: "황금박쥐", atk: 0, def: 0, crit: 0, evade: 15, hpRegen: 0 }, { name: "아기드래곤", atk: 50, def: 20, crit: 10, evade: 5, hpRegen: 20 }
     ];
-
-    const monsterTraits = {
-        "무특성": { text: "", desc: "특징 없음" }, "맹독": { text: "[맹독]", desc: "매 턴 플레어어에게 중독 피해" },
-        "흡혈": { text: "[흡혈]", desc: "적중 시 가한 피해의 일부 회복" }, "단단함": { text: "[단단함]", desc: "받는 피해량 20% 감소" },
-        "암살": { text: "[암살]", desc: "높은 치명타 확률 및 회피율(15%)" }, "재생": { text: "[재생]", desc: "매 턴 종료 시 최대 체력의 5% 회복" },
-        "파멸": { text: "[파멸]", desc: "턴이 지날수록 공격력이 대폭 증가" }
-    };
-
+    const monsterTraits = { "무특성":{text:""}, "맹독":{text:"[맹독]"}, "흡혈":{text:"[흡혈]"}, "단단함":{text:"[단단함]"}, "암살":{text:"[암살]"}, "재생":{text:"[재생]"}, "파멸":{text:"[파멸]"} };
     const baseMonsters = [
-        { name: "고블린 수색대", hp: 100, atk: 25, def: 5, exp: 40, gold: 30, speed: 8, trait: "무특성" },
-        { name: "맹독 슬라임", hp: 120, atk: 20, def: 10, exp: 45, gold: 35, speed: 5, trait: "맹독" },
-        { name: "오크 전사", hp: 180, atk: 40, def: 15, exp: 70, gold: 50, speed: 12, trait: "무특성" },
-        { name: "뱀파이어 박쥐", hp: 150, atk: 45, def: 5, exp: 65, gold: 45, speed: 25, trait: "흡혈" },
-        { name: "단단한 골렘", hp: 250, atk: 35, def: 35, exp: 90, gold: 60, speed: 2, trait: "단단함" },
-        { name: "그림자 암살자", hp: 180, atk: 60, def: 10, exp: 100, gold: 70, speed: 35, trait: "암살" },
-        { name: "리자드맨", hp: 250, atk: 55, def: 25, exp: 100, gold: 70, speed: 15, trait: "재생" },
-        { name: "데스나이트", hp: 350, atk: 70, def: 40, exp: 150, gold: 120, speed: 20, trait: "무특성" }
+        { name: "고블린", hp: 100, atk: 25, def: 5, exp: 40, gold: 30, speed: 8, trait: "무특성" }, { name: "맹독 슬라임", hp: 120, atk: 20, def: 10, exp: 45, gold: 35, speed: 5, trait: "맹독" },
+        { name: "오크 전사", hp: 180, atk: 40, def: 15, exp: 70, gold: 50, speed: 12, trait: "무특성" }, { name: "뱀파이어 박쥐", hp: 150, atk: 45, def: 5, exp: 65, gold: 45, speed: 25, trait: "흡혈" },
+        { name: "단단한 골렘", hp: 250, atk: 35, def: 35, exp: 90, gold: 60, speed: 2, trait: "단단함" }, { name: "그림자 암살자", hp: 180, atk: 60, def: 10, exp: 100, gold: 70, speed: 35, trait: "암살" },
+        { name: "리자드맨", hp: 250, atk: 55, def: 25, exp: 100, gold: 70, speed: 15, trait: "재생" }, { name: "데스나이트", hp: 350, atk: 70, def: 40, exp: 150, gold: 120, speed: 20, trait: "무특성" }
     ];
-    
     const bossMonsters = [
-        { name: "💀 심연의 지배자", hp: 1000, atk: 120, def: 60, exp: 500, gold: 600, speed: 30, trait: "맹독" },
-        { name: "💀 피의 군주", hp: 900, atk: 140, def: 50, exp: 500, gold: 600, speed: 40, trait: "흡혈" },
-        { name: "💀 파멸의 거상", hp: 1500, atk: 100, def: 100, exp: 500, gold: 600, speed: 15, trait: "파멸" }, 
-        { name: "💀 타락한 영웅", hp: 1100, atk: 150, def: 70, exp: 600, gold: 700, speed: 50, trait: "암살" }
+        { name: "💀 심연의 지배자", hp: 1000, atk: 120, def: 60, exp: 500, gold: 600, speed: 30, trait: "맹독" }, { name: "💀 피의 군주", hp: 900, atk: 140, def: 50, exp: 500, gold: 600, speed: 40, trait: "흡혈" },
+        { name: "💀 파멸의 거상", hp: 1500, atk: 100, def: 100, exp: 500, gold: 600, speed: 15, trait: "파멸" }, { name: "💀 타락한 영웅", hp: 1100, atk: 150, def: 70, exp: 600, gold: 700, speed: 50, trait: "암살" }
     ];
 
-    function startGame(jobName) {
-        player = {
-            baseJob: jobName, job: jobName, promoted: false, isAwakened: false, relicLevel: 0,
-            level: 1, exp: 0, maxExp: 50, gold: 500, potions: 5, scrolls: 0,
-            hp: 0, maxHp: 0, mp: 0, maxMp: 0,
-            baseAtk: 0, baseDef: 0, baseCrit: jobStats[jobName].crit, baseEvade: jobStats[jobName].evade,
-            atk: 0, def: 0, critRate: 0, evadeRate: 0, speed: 0, comboRate: 0,
-            skill: jobStats[jobName].skill, skillCost: jobStats[jobName].skillCost,
-            weapon: "맨주먹", weaponLevel: 0, armor: "평상복",
-            inventory: { "강화석": 0 }, pet: null, hasMercenary: false,
-            floor: 1, maxFloor: 1, reincarnation: 0, soulStones: 0,
-            absHp: 0, absAtk: 0, absDef: 0, soulHp: 0, soulAtk: 0, soulDef: 0
-        };
+    function startGame(j) {
+        player = { baseJob: j, job: j, promoted: false, isAwakened: false, relicLevel: 0, level: 1, exp: 0, maxExp: 50, gold: 500, potions: 5, scrolls: 0, hp: 0, maxHp: 0, mp: 0, maxMp: 0, baseAtk: 0, baseDef: 0, baseCrit: jobStats[j].crit, baseEvade: jobStats[j].evade, atk: 0, def: 0, critRate: 0, evadeRate: 0, speed: 0, comboRate: 0, skill: jobStats[j].skill, skillCost: jobStats[j].skillCost, weapon: "맨주먹", weaponLevel: 0, armor: "평상복", inventory: { "강화석": 0 }, pet: null, hasMercenary: false, floor: 1, maxFloor: 1, reincarnation: 0, soulStones: 0, absHp: 0, absAtk: 0, absDef: 0, soulHp: 0, soulAtk: 0, soulDef: 0 };
         baseWeaponAtk = 0; baseArmorDef = 0; isDead = false; isRaidMode = false;
         calcStats(); player.hp = player.maxHp; player.mp = player.maxMp;
         document.getElementById("start-screen").style.display = "none";
-        log(`<span class="highlight">[${jobName}]</span> 지옥의 탑에 오신 것을 환영합니다.`);
+        log(`<span class="highlight">[${j}]</span> 지옥의 탑 환영합니다.`);
         updateUI(); autoSave(); loadTownMap();
     }
 
     function calcStats() {
-        let bJob = jobStats[player.baseJob]; let pJob = player.promoted ? jobStats[player.job] : null;
-        let lvlHp = (player.level - 1) * 30; let lvlMp = (player.level - 1) * 15;
-        let lvlAtk = (player.level - 1) * 8; let lvlDef = (player.level - 1) * 4; let lvlSpeed = (player.level - 1) * 1;
-        let promoHp = pJob ? pJob.hpBonus : 0; let promoMp = pJob ? pJob.mpBonus : 0;
-        let promoAtk = pJob ? pJob.atkBonus : 0; let promoDef = pJob ? pJob.defBonus : 0;
-        let promoSpeed = pJob ? pJob.speedBonus : 0; let promoCombo = pJob ? pJob.comboBonus : 0;
+        let b = jobStats[player.baseJob]; let p = player.promoted ? jobStats[player.job] : null;
+        let r = player.relicLevel || 0;
+        let rHp = b.hp + (player.level-1)*30 + (p?p.hpBonus:0) + player.absHp + player.soulHp + (r*100);
+        let rMp = b.mp + (player.level-1)*15 + (p?p.mpBonus:0);
+        let rAtk = b.atk + (player.level-1)*8 + (p?p.atkBonus:0) + player.absAtk + player.soulAtk + (r*20);
+        let rDef = b.def + (player.level-1)*4 + (p?p.defBonus:0) + player.absDef + player.soulDef + (r*10);
+        let rm = Math.pow(1.2, player.reincarnation); let am = player.isAwakened ? 2.5 : 1.0; 
         
-        let rLvl = player.relicLevel || 0;
-        let relicHp = rLvl * 100; let relicAtk = rLvl * 20; let relicDef = rLvl * 10;
-        let relicSpeed = rLvl * 2; let relicCrit = rLvl * 0.5; let relicEvade = rLvl * 0.2; let relicCombo = rLvl * 0.5;
-
-        let rawHp = bJob.hp + lvlHp + promoHp + player.absHp + player.soulHp + relicHp;
-        let rawMp = bJob.mp + lvlMp + promoMp;
-        let rawAtk = bJob.atk + lvlAtk + promoAtk + player.absAtk + player.soulAtk + relicAtk;
-        let rawDef = bJob.def + lvlDef + promoDef + player.absDef + player.soulDef + relicDef;
-        let rMult = Math.pow(1.2, player.reincarnation); let aMult = player.isAwakened ? 2.5 : 1.0; 
-        
-        player.maxHp = Math.floor(rawHp * rMult * aMult); player.maxMp = Math.floor(rawMp * rMult * aMult);
-        player.baseAtk = Math.floor(rawAtk * rMult * aMult); player.baseDef = Math.floor(rawDef * rMult * aMult);
-        player.baseCrit = bJob.crit + (pJob ? pJob.critBonus : 0) + relicCrit;
-        player.baseEvade = bJob.evade + (pJob ? pJob.evadeBonus : 0) + relicEvade;
-        player.speed = bJob.speed + lvlSpeed + promoSpeed + relicSpeed;
-        player.comboRate = (bJob.combo + promoCombo + relicCombo).toFixed(1);
+        player.maxHp = Math.floor(rHp * rm * am); player.maxMp = Math.floor(rMp * rm * am);
+        player.baseAtk = Math.floor(rAtk * rm * am); player.baseDef = Math.floor(rDef * rm * am);
+        player.baseCrit = b.crit + (p?p.critBonus:0) + (r*0.5); player.baseEvade = b.evade + (p?p.evadeBonus:0) + (r*0.2);
+        player.speed = b.speed + (player.level-1)*1 + (p?p.speedBonus:0) + (r*2); player.comboRate = (b.combo + (p?p.comboBonus:0) + (r*0.5)).toFixed(1);
     }
 
-    function log(msg) {
-        const lw = document.getElementById("log-window"); lw.innerHTML += msg + "<br>"; lw.scrollTop = lw.scrollHeight;
-    }
+    function log(msg) { const lw = document.getElementById("log-window"); lw.innerHTML += msg + "<br>"; lw.scrollTop = lw.scrollHeight; }
 
     // ==========================================
-    // 🔥 2D 맵 시스템 핵심 엔진 🔥
+    // 3. 2D 맵 코어 엔진 (수정됨)
     // ==========================================
     const MAP_SIZE = 11;
     let mapEntities = [];
     let mapPlayerPos = { x: 5, y: 5 };
-    let activeMenuMode = 'map'; // 'map', 'combat', 'shop', etc.
+    let activeMenuMode = 'map'; 
 
     function enterMapMode() {
-        toggleMode('map');
-        // 강제로 메뉴 창들을 닫고 맵 상태로 복귀
-        document.getElementById('promote-options').style.display = 'none';
-        document.getElementById('pet-options').style.display = 'none';
-        document.getElementById('reinc-options').style.display = 'none';
+        toggleMode('map'); document.getElementById('promote-options').style.display = 'none'; 
+        document.getElementById('pet-options').style.display = 'none'; document.getElementById('reinc-options').style.display = 'none';
+        drawMap();
     }
 
     function toggleMode(mode) {
         activeMenuMode = mode;
         document.querySelectorAll('.menu-section').forEach(el => el.classList.remove('active-actions'));
-        document.getElementById("monster-panel").style.display = "none";
-        
-        if(document.getElementById(mode + "-actions")) {
-            document.getElementById(mode + "-actions").classList.add("active-actions");
-        }
-        if (mode === "combat") document.getElementById("monster-panel").style.display = "block";
+        if(document.getElementById(mode + "-actions")) document.getElementById(mode + "-actions").classList.add("active-actions");
     }
 
     function drawMap() {
-        const container = document.getElementById("map-container");
-        container.innerHTML = "";
-        
-        // Draw entities (NPCs, Monsters, Portals)
+        const c = document.getElementById("map-container"); c.innerHTML = "";
+        // 엔티티 그리기
         mapEntities.forEach(ent => {
-            let el = document.createElement("div");
-            el.className = "entity";
-            el.innerText = ent.icon;
-            el.style.left = (ent.x * 40) + "px";
-            el.style.top = (ent.y * 40) + "px";
-            container.appendChild(el);
+            let el = document.createElement("div"); el.className = "entity"; el.innerText = ent.icon;
+            el.style.left = (ent.x * 30) + "px"; el.style.top = (ent.y * 30) + "px"; c.appendChild(el);
         });
-
-        // Draw Player
-        let pEl = document.createElement("div");
-        pEl.className = "entity player-entity";
-        // 직업별 아이콘
-        let pIcon = '🧍';
-        if(player.baseJob === '전사') pIcon = '🤺';
-        if(player.baseJob === '마법사') pIcon = '🧙‍♂️';
-        if(player.baseJob === '도적') pIcon = '🥷';
-        if(player.baseJob === '궁수') pIcon = '🏹';
-        
-        pEl.innerText = pIcon;
-        pEl.style.left = (mapPlayerPos.x * 40) + "px";
-        pEl.style.top = (mapPlayerPos.y * 40) + "px";
-        container.appendChild(pEl);
+        // 플레이어 그리기 (직업별 아이콘)
+        let pEl = document.createElement("div"); pEl.className = "entity player-entity";
+        let pIcon = '🧍'; if(player.baseJob==='전사') pIcon='🤺'; if(player.baseJob==='마법사') pIcon='🧙‍♂️'; if(player.baseJob==='도적') pIcon='🥷'; if(player.baseJob==='궁수') pIcon='🏹';
+        pEl.innerText = pIcon; pEl.style.left = (mapPlayerPos.x * 30) + "px"; pEl.style.top = (mapPlayerPos.y * 30) + "px"; c.appendChild(pEl);
     }
 
-    function loadTownMap() {
-        document.getElementById("map-title-display").innerText = "🗺️ 마을 광장";
-        mapEntities = [
-            { x: 5, y: 1, icon: '🏰', onInteract: () => toggleMode('tower-entrance') }, // 탑 입구
-            { x: 2, y: 3, icon: '🛏️', onInteract: () => toggleMode('inn') },         // 여관
-            { x: 8, y: 3, icon: '🏪', onInteract: () => toggleMode('shop') },        // 상점
-            { x: 2, y: 7, icon: '🔨', onInteract: () => toggleMode('blacksmith') },  // 대장간
-            { x: 8, y: 7, icon: '👴', onInteract: () => toggleMode('npc') },         // 촌장(NPC)
-            { x: 5, y: 9, icon: '🌌', onInteract: () => toggleMode('rift') }         // 차원의 틈
-        ];
-        mapPlayerPos = { x: 5, y: 5 };
-        enterMapMode();
-        drawMap();
-    }
+    // 방향키 이동 (스크롤 방지 추가)
+    window.addEventListener("keydown", (e) => {
+        if(isDead || activeMenuMode !== 'map') return;
+        if(['ArrowUp', 'w', 'W'].includes(e.key)) { movePlayer(0, -1); e.preventDefault(); }
+        if(['ArrowDown', 's', 'S'].includes(e.key)) { movePlayer(0, 1); e.preventDefault(); }
+        if(['ArrowLeft', 'a', 'A'].includes(e.key)) { movePlayer(-1, 0); e.preventDefault(); }
+        if(['ArrowRight', 'd', 'D'].includes(e.key)) { movePlayer(1, 0); e.preventDefault(); }
+    }, {passive: false});
 
     function movePlayer(dx, dy) {
         if(isDead || activeMenuMode !== 'map') return;
-        let nx = mapPlayerPos.x + dx;
-        let ny = mapPlayerPos.y + dy;
-
+        let nx = mapPlayerPos.x + dx; let ny = mapPlayerPos.y + dy;
         if(nx >= 0 && nx < MAP_SIZE && ny >= 0 && ny < MAP_SIZE) {
             let entity = mapEntities.find(e => e.x === nx && e.y === ny);
             if(entity) {
-                entity.onInteract(); // NPC나 몬스터와 충돌
-            } else {
-                mapPlayerPos.x = nx; mapPlayerPos.y = ny;
-                drawMap();
-            }
+                currentInteractingEntity = entity; // 충돌한 엔티티 기억
+                entity.onInteract();
+            } else { mapPlayerPos.x = nx; mapPlayerPos.y = ny; drawMap(); }
         }
     }
 
-    // 키보드 이벤트 연동
-    window.addEventListener("keydown", (e) => {
-        if(['ArrowUp', 'w', 'W'].includes(e.key)) movePlayer(0, -1);
-        if(['ArrowDown', 's', 'S'].includes(e.key)) movePlayer(0, 1);
-        if(['ArrowLeft', 'a', 'A'].includes(e.key)) movePlayer(-1, 0);
-        if(['ArrowRight', 'd', 'D'].includes(e.key)) movePlayer(1, 0);
-    });
+    function loadTownMap() {
+        document.getElementById("map-container").className = "map-town";
+        document.getElementById("map-title-display").innerText = "🗺️ 평화로운 마을 광장";
+        mapEntities = [
+            { x: 5, y: 1, icon: '🏰', onInteract: () => toggleMode('tower-entrance') },
+            { x: 2, y: 4, icon: '🛏️', onInteract: () => toggleMode('inn') },
+            { x: 8, y: 4, icon: '🏪', onInteract: () => toggleMode('shop') },
+            { x: 2, y: 7, icon: '🔨', onInteract: () => toggleMode('blacksmith') },
+            { x: 8, y: 7, icon: '👴', onInteract: () => toggleMode('npc') },
+            { x: 5, y: 9, icon: '🌌', onInteract: () => toggleMode('rift') }
+        ];
+        mapPlayerPos = { x: 5, y: 5 }; enterMapMode();
+    }
+
+    // 던전 맵 랜덤 생성 (탐험 요소)
+    function enterTower() {
+        if (isDead) return;
+        isRaidMode = false;
+        document.getElementById("map-container").className = "map-dungeon";
+        document.getElementById("map-title-display").innerText = `🏰 절망의 탑 [${player.floor}층]`;
+        log(`<hr>🏰 ${player.floor}층 진입...`);
+        
+        mapEntities = [];
+        // 보스층(5층 단위)은 보스가 길을 막음
+        if (player.floor % 5 === 0) {
+            mapEntities.push({ x: 5, y: 3, icon: '💀', onInteract: () => startCombat(true) });
+            mapEntities.push({ x: 5, y: 1, icon: '🔼', onInteract: () => nextFloor() }); // 보스 뒤 포탈
+        } else {
+            // 일반 층: 포탈 1개, 몬스터 3~5마리 흩뿌리기
+            mapEntities.push({ x: 5, y: 1, icon: '🔼', onInteract: () => nextFloor() });
+            let mobCount = Math.floor(Math.random() * 3) + 3;
+            for(let i=0; i<mobCount; i++) {
+                let mx = Math.floor(Math.random() * MAP_SIZE); let my = Math.floor(Math.random() * 7) + 2; 
+                // 겹치지 않게
+                if(!mapEntities.find(e => e.x===mx && e.y===my) && !(mx===5 && my===9)) {
+                    mapEntities.push({ x: mx, y: my, icon: '👹', onInteract: () => startCombat(false) });
+                }
+            }
+        }
+        mapPlayerPos = { x: 5, y: 9 }; // 아래에서 시작
+        enterMapMode(); autoSave();
+    }
+
+    function startCombat(isBoss) {
+        let sm = Math.pow(1.25, player.floor - 1); let rm = Math.pow(1.35, player.floor - 1); 
+        let t = isBoss ? bossMonsters[Math.floor(Math.random() * bossMonsters.length)] : baseMonsters[Math.floor(Math.random() * baseMonsters.length)];
+        if(isBoss) log(`<span class='damage'>⚠️ 거대한 압박감... 보스 조우!!</span>`);
+        currentMonster = {
+            name: t.name, trait: t.trait, hp: Math.floor(t.hp * sm), maxHp: Math.floor(t.hp * sm), atk: Math.floor(t.atk * sm), def: Math.floor(t.def * sm),
+            speed: Math.floor(t.speed * Math.pow(1.1, player.floor - 1)), exp: Math.floor(t.exp * rm), gold: Math.floor(t.gold * rm)
+        };
+        log(`<span class='damage'>[${currentMonster.name}]과 전투!</span>`); 
+        toggleMode("combat"); updateUI();
+    }
+
+    function enterRaid() {
+        if (isDead) return;
+        isRaidMode = true; raidTurn = 10; totalRaidDmg = 0;
+        document.getElementById("map-container").className = "map-dungeon";
+        document.getElementById("map-title-display").innerText = `🌌 차원의 틈 (레이드)`;
+        currentMonster = { name: "🐉 심연의 마룡", trait: "무특성", hp: 999999999, maxHp: 999999999, atk: 9999, def: 0, speed: 50, exp: 0, gold: 0 };
+        
+        mapEntities = [
+            { x: 5, y: 3, icon: '🐉', onInteract: () => {
+                log(`<hr><span class='epic'>🌌 토벌 개시! 10턴 버티세요.</span>`);
+                toggleMode("combat"); updateUI();
+            }},
+            { x: 5, y: 9, icon: '🔙', onInteract: () => loadTownMap() }
+        ];
+        mapPlayerPos = { x: 5, y: 7 }; enterMapMode();
+    }
+
+    function nextFloor() { 
+        player.floor++; if (player.floor > player.maxFloor) player.maxFloor = player.floor; 
+        enterTower(); 
+    }
 
     // ==========================================
-    // UI 업데이트 및 각종 기능
+    // 4. 스탯 및 전투 처리
     // ==========================================
     function changeFloor(dir) {
         if(!player.maxFloor) player.maxFloor = player.floor;
-        let newFloor = player.floor + dir;
-        if (newFloor < 1) newFloor = 1;
-        if (newFloor > player.maxFloor) newFloor = player.maxFloor;
-        player.floor = newFloor; updateUI();
+        let nf = player.floor + dir; player.floor = Math.min(Math.max(1, nf), player.maxFloor); updateUI();
     }
 
     function updateUI() {
         if(!player.job) return;
-
-        let weaponBonus = baseWeaponAtk + (player.weaponLevel * 10); let armorBonus = baseArmorDef;
-        let pAtk = player.baseAtk + weaponBonus; let pDef = player.baseDef + armorBonus;
+        let pAtk = player.baseAtk + baseWeaponAtk + (player.weaponLevel * 10); let pDef = player.baseDef + baseArmorDef;
         let pCrit = player.baseCrit; let pEvade = player.baseEvade;
-
         if (player.pet) { pAtk += player.pet.atk; pDef += player.pet.def; pCrit += player.pet.crit; pEvade += player.pet.evade; }
         player.atk = pAtk; player.def = pDef; player.critRate = pCrit; player.evadeRate = pEvade;
 
@@ -704,411 +610,154 @@
         document.getElementById("p-weapon").innerText = player.weapon; document.getElementById("p-enhance").innerText = player.weaponLevel > 0 ? `(+${player.weaponLevel})` : "";
         document.getElementById("p-armor").innerText = player.armor;
         
-        let rLvl = player.relicLevel || 0;
-        document.getElementById("p-relic").innerText = `+${rLvl} 단계`;
-        if(document.getElementById("relic-level-ui")) {
-            document.getElementById("relic-level-ui").innerText = rLvl;
-            document.getElementById("relic-cost-ui").innerText = Math.floor(100000 * Math.pow(1.5, rLvl)).toLocaleString();
-        }
+        let rLvl = player.relicLevel || 0; document.getElementById("p-relic").innerText = `+${rLvl} 단계`;
+        if(document.getElementById("relic-level-ui")) { document.getElementById("relic-level-ui").innerText = rLvl; document.getElementById("relic-cost-ui").innerText = Math.floor(100000 * Math.pow(1.5, rLvl)).toLocaleString(); }
         
         document.getElementById("p-maxfloor").innerText = player.maxFloor; 
-        if(document.getElementById("target-floor")) {
-            document.getElementById("target-floor").innerText = player.floor;
-            document.getElementById("max-floor-display").innerText = player.maxFloor;
-            document.getElementById("target-floor-btn").innerText = player.floor;
-        }
-        
+        if(document.getElementById("target-floor")) { document.getElementById("target-floor").innerText = player.floor; document.getElementById("max-floor-display").innerText = player.maxFloor; document.getElementById("target-floor-btn").innerText = player.floor; }
         if(document.getElementById("inn-cost")) document.getElementById("inn-cost").innerText = 50 + ((player.level - 1) * 20);
-
         document.getElementById("p-potion").innerText = player.potions; document.getElementById("p-scroll").innerText = player.scrolls;
-        document.getElementById("p-merc").innerText = player.hasMercenary ? "고용됨 (공+50)" : "미고용";
+        document.getElementById("p-merc").innerText = player.hasMercenary ? "고용됨 (+50)" : "미고용";
         document.getElementById("p-pet").innerText = player.pet ? player.pet.name : "없음";
         if(document.getElementById("enhance-cost")) document.getElementById("enhance-cost").innerText = 200 + (player.weaponLevel * 150);
-        document.getElementById("p-soulstone").innerText = player.soulStones;
-        document.getElementById("p-reinc").innerText = player.reincarnation;
-        document.getElementById("p-reinc-mult").innerText = Math.pow(1.2, player.reincarnation).toFixed(2);
+        document.getElementById("p-soulstone").innerText = player.soulStones; document.getElementById("p-reinc").innerText = player.reincarnation; document.getElementById("p-reinc-mult").innerText = Math.pow(1.2, player.reincarnation).toFixed(2);
 
-        let invenHTML = "";
-        for (let item in player.inventory) { if (player.inventory[item] > 0) invenHTML += `▪️ ${item}: ${player.inventory[item]}개<br>`; }
-        document.getElementById("inventory-list").innerHTML = invenHTML === "" ? "텅 비어있음" : invenHTML;
+        let invenHTML = ""; for (let i in player.inventory) if(player.inventory[i]>0) invenHTML += `▪️ ${i}: ${player.inventory[i]}개<br>`;
+        document.getElementById("inventory-list").innerHTML = invenHTML || "비어있음";
 
         if (currentMonster) {
-            document.getElementById("m-hp").innerText = currentMonster.hp; 
-            document.getElementById("m-maxhp").innerText = currentMonster.maxHp === 999999999 ? "∞" : currentMonster.maxHp;
+            document.getElementById("m-hp").innerText = currentMonster.hp; document.getElementById("m-maxhp").innerText = currentMonster.maxHp === 999999999 ? "∞" : currentMonster.maxHp;
             document.getElementById("m-hp-bar").style.width = Math.max(0, (currentMonster.hp / currentMonster.maxHp) * 100) + "%";
             document.getElementById("m-atk").innerText = currentMonster.atk; document.getElementById("m-def").innerText = currentMonster.def;
-            document.getElementById("m-speed").innerText = currentMonster.speed;
-            document.getElementById("m-floor").innerText = isRaidMode ? "레이드" : player.floor; 
-            document.getElementById("m-name").innerText = currentMonster.name;
-            document.getElementById("m-trait").innerText = monsterTraits[currentMonster.trait].text;
+            document.getElementById("m-speed").innerText = currentMonster.speed; document.getElementById("m-floor").innerText = isRaidMode ? "레이드" : player.floor; 
+            document.getElementById("m-name").innerText = currentMonster.name; document.getElementById("m-trait").innerText = monsterTraits[currentMonster.trait].text;
         }
     }
 
     function upgradeRelic() {
-        if(!player.relicLevel) player.relicLevel = 0;
         let cost = Math.floor(100000 * Math.pow(1.5, player.relicLevel));
-        if (player.gold >= cost) {
-            player.gold -= cost; player.relicLevel++;
-            log(`<b><span style='color:#00ffff; font-size:18px;'>🔮 초월 유물이 +${player.relicLevel} 단계로 강화되었습니다! (모든 능력치 증가)</span></b>`);
-            calcStats(); updateUI(); autoSave();
-        } else { log("골드가 부족합니다!"); }
+        if (player.gold >= cost) { player.gold -= cost; player.relicLevel++; log(`<b><span style='color:#00ffff;'>🔮 유물이 +${player.relicLevel} 단계로 강화됨!</span></b>`); calcStats(); updateUI(); autoSave(); } 
+        else log("골드 부족!");
     }
 
-    function rest() { 
-        let cost = 50 + ((player.level - 1) * 20);
-        if (player.gold >= cost) { 
-            player.gold -= cost; player.hp = player.maxHp; player.mp = player.maxMp; 
-            log(`🛏️ 여관에서 푹 쉬었습니다. 체력/마나 회복 (-${cost}G)`); 
-            updateUI(); autoSave(); enterMapMode();
-        } else log("골드가 부족합니다!"); 
-    }
-    
-    function buyPotion() { if (player.gold >= 50) { player.gold -= 50; player.potions++; log("포션 구매 (-50G)"); updateUI(); autoSave(); } else log("골드 부족!"); }
-    function buyItem(type, p) { if (player.gold >= p) { player.gold -= p; player.scrolls++; log("📜 파괴 방지 주문서 구매!"); updateUI(); autoSave(); } else log("골드 부족!"); }
-    function buyEquip(type, name, price, stat) {
-        if (player.gold >= price) { player.gold -= price;
-            if (type === '무기') { player.weapon = name; baseWeaponAtk = stat; player.weaponLevel = 0; } else { player.armor = name; baseArmorDef = stat; }
-            log(`<b><span class='highlight'>[${name}] 장착 완료!</span></b>`); updateUI(); autoSave();
-        } else log("골드가 부족합니다!");
-    }
-    function hireMercenary() {
-        if (player.hasMercenary) return log("이미 고용했습니다.");
-        if (player.gold >= 2000) { player.gold -= 2000; player.hasMercenary = true; log("🤝 정예 용병 고용!"); updateUI(); autoSave(); } else log("골드 부족!");
-    }
-
-    function attemptAwakening() {
-        if (player.isAwakened) return log("<span class='damage'>이미 한계를 초월했습니다.</span>");
-        let costGold = 10000; let costSoul = 10; let costStone = 5;
-        if (player.gold < costGold || player.soulStones < costSoul || (player.inventory["강화석"] || 0) < costStone) { return log(`<span class='damage'>[심연의 제단] 제물이 부족하다. (필요: 10,000G, 영혼석 10개, 강화석 5개)</span>`); }
-        if(!confirm(`성공 확률은 1.5%입니다. 정말로 시도하시겠습니까?`)) return;
-        player.gold -= costGold; player.soulStones -= costSoul; player.inventory["강화석"] -= costStone;
-        log(`<hr><span class='damage' style='font-size:16px;'>🩸 심연의 제단에 막대한 제물을 바칩니다...</span>`);
-        if (Math.random() < 0.015) {
-            player.isAwakened = true; calcStats(); player.hp = player.maxHp; player.mp = player.maxMp;
-            log(`<b><span class='awakened-text' style='font-size: 22px;'>🔥 기적!! 한계를 초월하여 [각성] 상태가 되었습니다!! (모든 스탯 2.5배 폭증)</span></b>`);
-        } else { log(`<span class='damage'>💥 끔찍한 비명과 함께 제물이 모두 재로 변했습니다... (각성 실패)</span>`); }
-        updateUI(); autoSave();
-    }
-
-    function promote(newJob) {
-        player.job = newJob; player.promoted = true;
-        player.skill = jobStats[newJob].skill; player.skillCost = jobStats[newJob].skillCost;
-        calcStats(); player.hp = player.maxHp; player.mp = player.maxMp;
-        document.getElementById("skill-name").innerText = player.skill; document.getElementById("skill-cost").innerText = player.skillCost;
-        document.getElementById("promote-options").style.display = "none";
-        log(`<hr><b><span style='font-size: 18px; color: #f1c40f;'>🎊 전직 성공! [${newJob}]의 길을 걷습니다!</span></b>`); updateUI(); autoSave();
-    }
-
-    function reincarnate() {
-        if (player.floor < 20) return log(`<span class='damage'>[경고] 환생은 20층 이상부터 가능합니다! (현재 ${player.floor}층)</span>`);
-        let reward = player.floor; player.soulStones += reward; player.reincarnation++;
-        
-        log(`<hr><b><span class='epic' style='font-size:20px;'>🌀 환생했습니다! (환생 ${player.reincarnation}회차)</span></b>`);
-        log(`<span class='highlight'>보상으로 영혼석 ${reward}개를 획득했습니다! 기본 스탯이 복리로 상승합니다.</span>`);
-        
-        player.floor = 1; player.level = 1; player.exp = 0; player.maxExp = 50;
-        player.job = player.baseJob; player.promoted = false;
-        player.skill = jobStats[player.baseJob].skill; player.skillCost = jobStats[player.baseJob].skillCost;
-        player.gold = 500; player.hasMercenary = false;
-        
-        calcStats(); player.hp = player.maxHp; player.mp = player.maxMp;
-        document.getElementById("skill-name").innerText = player.skill; document.getElementById("skill-cost").innerText = player.skillCost;
-        enterMapMode(); updateUI(); autoSave();
-    }
-
-    function upgradeSoul(type) {
-        if (player.soulStones < 10) return log("<span class='damage'>영혼석이 부족합니다! (10개 필요)</span>");
-        player.soulStones -= 10;
-        if (type === 'atk') { player.soulAtk += 5; log("<span class='epic'>🔮 영혼 공격력 +5 증가!</span>"); }
-        if (type === 'def') { player.soulDef += 5; log("<span class='epic'>🔮 영혼 방어력 +5 증가!</span>"); }
-        if (type === 'hp') { player.soulHp += 50; log("<span class='epic'>🔮 영혼 체력 +50 증가!</span>"); }
-        calcStats(); updateUI(); autoSave();
-    }
-
-    function drawPet() {
-        if (player.gold < 1000) return log("골드 부족!");
-        player.gold -= 1000;
-        let rand = Math.random(); let picked = (rand < 0.05) ? petDB[3] : (rand < 0.25) ? petDB[2] : (rand < 0.45) ? petDB[1] : petDB[0];
-        player.pet = picked; log(`🥚 알 부화! <b><span class='epic'>[${picked.name}]</span></b> 획득!`); updateUI(); autoSave();
-    }
-
-    function enhanceWeapon() {
-        if (player.weapon === "맨주먹") return log("맨주먹은 강화 불가.");
-        let cost = 200 + (player.weaponLevel * 150);
-        let useScroll = document.getElementById("use-scroll").checked;
-
-        if (player.gold < cost || (player.inventory["강화석"] || 0) < 1) return log("재화 부족!");
-        if (useScroll && player.scrolls < 1) { document.getElementById("use-scroll").checked = false; return log("주문서 없음!"); }
-
-        player.gold -= cost; player.inventory["강화석"]--; if (useScroll) player.scrolls--;
-        let successRate = Math.max(0.05, 0.95 - (player.weaponLevel * 0.08)); 
-
-        if (Math.random() < successRate) { player.weaponLevel++; log(`<b><span class='highlight'>✨ 강화 성공!! [${player.weapon}] +${player.weaponLevel}</span></b>`); } 
-        else {
-            if (useScroll) { log(`<span class='heal'>💦 실패했지만 주문서로 무기 보호!</span>`); } 
-            else {
-                if (player.weaponLevel >= 10 && Math.random() < 0.5) { player.weaponLevel = 0; log(`<span class='damage'>💥💥 무참히 깨졌습니다!! 0강 초기화...</span>`); } 
-                else if (player.weaponLevel >= 5) { player.weaponLevel--; log(`<span class='damage'>💥 쨍그랑! 수치 1 하락.</span>`); } 
-                else { log(`<span class='damage'>💦 강화 실패.</span>`); }
-            }
-        }
-        updateUI(); autoSave();
-    }
-
-    // 🔥 던전 맵 생성
-    function enterTower() {
-        if (isDead) return;
-        isRaidMode = false;
-        log(`<hr>🏰 ${player.floor}층 진입...`);
-        let statMultiplier = Math.pow(1.25, player.floor - 1); 
-        let rewardMultiplier = Math.pow(1.35, player.floor - 1); 
-        
-        let template = (player.floor % 5 === 0) ? bossMonsters[Math.floor(Math.random() * bossMonsters.length)] : baseMonsters[Math.floor(Math.random() * baseMonsters.length)];
-        if(player.floor % 5 === 0) log(`<span class='damage'>⚠️ 거대한 압박감이 느껴집니다... 보스 등장!!</span>`);
-
-        currentMonster = {
-            name: template.name, trait: template.trait,
-            hp: Math.floor(template.hp * statMultiplier), maxHp: Math.floor(template.hp * statMultiplier),
-            atk: Math.floor(template.atk * statMultiplier), def: Math.floor(template.def * statMultiplier),
-            speed: Math.floor(template.speed * Math.pow(1.1, player.floor - 1)),
-            exp: Math.floor(template.exp * rewardMultiplier), gold: Math.floor(template.gold * rewardMultiplier)
-        };
-        
-        // 맵 세팅
-        document.getElementById("map-title-display").innerText = `🏰 절망의 탑 [${player.floor}층]`;
-        mapEntities = [
-            { x: 5, y: 3, icon: '👹', onInteract: () => startCombat() }, // 몬스터
-            { x: 5, y: 9, icon: '🔙', onInteract: () => loadTownMap() }  // 귀환 포탈
-        ];
-        mapPlayerPos = { x: 5, y: 7 };
-        enterMapMode();
-        drawMap();
-    }
-
-    // 전투 시작
-    function startCombat() {
-        log(`<span class='damage'>[${currentMonster.name}] 조우! ${monsterTraits[currentMonster.trait].text}</span>`); 
-        toggleMode("combat"); updateUI(); autoSave();
-    }
-
-    // 레이드 맵 세팅
-    function enterRaid() {
-        if (isDead) return;
-        isRaidMode = true; raidTurn = 10; totalRaidDmg = 0;
-        
-        currentMonster = {
-            name: "🐉 심연의 마룡", trait: "무특성",
-            hp: 999999999, maxHp: 999999999,
-            atk: 9999, def: 0, speed: 50,
-            exp: 0, gold: 0
-        };
-        
-        document.getElementById("map-title-display").innerText = `🌌 차원의 틈 (레이드)`;
-        mapEntities = [
-            { x: 5, y: 3, icon: '🐉', onInteract: () => {
-                log(`<hr><span class='epic' style='font-size:20px;'>🌌 차원의 틈 전투 개시!</span>`);
-                log(`<span class='damage'>⚠️ 무한한 체력을 가진 보스를 상대로 10턴 간 딜을 넣으세요!</span>`);
-                toggleMode("combat"); updateUI(); autoSave();
-            }},
-            { x: 5, y: 9, icon: '🔙', onInteract: () => loadTownMap() }
-        ];
-        mapPlayerPos = { x: 5, y: 7 };
-        enterMapMode(); drawMap();
-    }
-
-    function nextFloor() { 
-        player.floor++; 
-        if (player.floor > player.maxFloor) player.maxFloor = player.floor; 
-        enterTower(); 
-    }
+    function rest() { let cost = 50 + ((player.level - 1) * 20); if (player.gold >= cost) { player.gold -= cost; player.hp = player.maxHp; player.mp = player.maxMp; log(`여관 휴식 (-${cost}G)`); updateUI(); autoSave(); enterMapMode(); } else log("골드 부족!"); }
+    function buyPotion() { if(player.gold>=50){player.gold-=50; player.potions++; log("포션 구매"); updateUI(); autoSave();} }
+    function buyItem(t, p) { if(player.gold>=p){player.gold-=p; player.scrolls++; log("주문서 구매!"); updateUI(); autoSave();} }
+    function buyEquip(t, n, p, s) { if(player.gold>=p){player.gold-=p; if(t==='무기'){player.weapon=n; baseWeaponAtk=s; player.weaponLevel=0;}else{player.armor=n; baseArmorDef=s;} log(`[${n}] 장착!`); updateUI(); autoSave();} }
+    function hireMercenary() { if(player.gold>=2000 && !player.hasMercenary){player.gold-=2000; player.hasMercenary=true; log("용병 고용!"); updateUI(); autoSave();} }
 
     function calcDamage(atk, def) { let b = atk - def; return Math.floor((b < 1 ? 1 : b) * (0.9 + Math.random() * 0.2)); }
 
-    function startTurn(actionType) {
+    function startTurn(action) {
         if (!currentMonster || isDead) return;
+        if (action === 'skill' && player.mp < player.skillCost) return log("마나 부족!");
+        if (action === 'heal' && player.potions <= 0) return log("포션 없음!");
 
-        if (actionType === 'skill' && player.mp < player.skillCost) return log("마나 부족!");
-        if (actionType === 'heal' && player.potions <= 0) return log("포션 없음!");
-
-        let pSpeed = player.speed; let mSpeed = currentMonster.speed;
-
-        if (actionType === "run" || actionType === "heal" || pSpeed >= mSpeed) {
-            if (pSpeed >= mSpeed && actionType !== "run" && actionType !== "heal") log(`<span class='highlight'>⚡ 당신이 더 빠릅니다! (선공)</span>`);
-            doPlayerAction(actionType, () => {
-                if (currentMonster && currentMonster.hp > 0 && !isRaidMode) doEnemyAction(() => endPhase());
-                else if(isRaidMode && !isDead) doEnemyAction(() => endPhase());
-            });
+        if (action === "run" || action === "heal" || player.speed >= currentMonster.speed) {
+            if (player.speed >= currentMonster.speed && action !== "run" && action !== "heal") log(`<span class='highlight'>⚡ 선공!</span>`);
+            doPlayerAction(action, () => { if (currentMonster && currentMonster.hp > 0 && !isRaidMode) doEnemyAction(() => endPhase()); else if(isRaidMode && !isDead) doEnemyAction(() => endPhase()); });
         } else {
-            log(`<span class='damage'>⚡ 적이 더 빠릅니다! (적의 선제 공격)</span>`);
-            doEnemyAction(() => {
-                if (!isDead && currentMonster) doPlayerAction(actionType, () => endPhase());
-            });
+            log(`<span class='damage'>⚡ 적 선공!</span>`);
+            doEnemyAction(() => { if (!isDead && currentMonster) doPlayerAction(action, () => endPhase()); });
         }
     }
 
     function doPlayerAction(type, next) {
         if (type === "run") {
-            if (isRaidMode) { log("레이드 중에는 도망칠 수 없습니다!"); return; }
-            if (Math.random() < 0.3) { log("도망 성공!"); currentMonster = null; loadTownMap(); updateUI(); autoSave(); return; }
+            if (isRaidMode) return log("레이드 도주 불가!");
+            if (Math.random() < 0.3) { log("도망 성공!"); currentMonster = null; enterMapMode(); return; }
             else { log("도망 실패!"); next(); return; }
         }
-        if (type === "heal") {
-            player.potions--; player.hp = Math.min(player.maxHp, player.hp + 150); log(`<span class='heal'>포션 사용 (HP 150 회복).</span>`); next(); return;
-        }
+        if (type === "heal") { player.potions--; player.hp = Math.min(player.maxHp, player.hp + 150); log(`<span class='heal'>포션 회복 (+150).</span>`); next(); return; }
 
         let dmg = 0;
-        if (type === "attack") {
-            dmg = calcDamage(player.atk, currentMonster.def);
-            if (Math.random() < (player.critRate / 100)) { dmg *= 2; log(`<b><span class='highlight'>⚡ 크리티컬!</span></b>`); }
-        } else if (type === "skill") {
+        if (type === "attack") { dmg = calcDamage(player.atk, currentMonster.def); if (Math.random() < (player.critRate/100)) { dmg*=2; log(`<b><span class='highlight'>크리티컬!</span></b>`); } } 
+        else if (type === "skill") {
             player.mp -= player.skillCost;
             switch(player.skill) {
                 case "대지가르기": case "파이어볼": case "연속베기": case "조준사격": dmg = calcDamage(player.atk * 2.5, currentMonster.def * 0.5); break;
-                case "극발도": dmg = calcDamage(player.atk * 3.5, 0); log("<span class='highlight'>방어력 완전 무시!</span>"); break;
-                case "광란": dmg = calcDamage(player.atk * 4.0, currentMonster.def); player.hp -= 20; break;
-                case "메테오": dmg = calcDamage(player.atk * 4.5, currentMonster.def); break;
-                case "생명흡수": dmg = calcDamage(player.atk * 2.5, currentMonster.def); let h = Math.floor(dmg*0.3); player.hp = Math.min(player.maxHp, player.hp+h); log(`<span class='heal'>체력 ${h} 흡수!</span>`); break;
-                case "절명": dmg = calcDamage(player.atk * 2.0, currentMonster.def); if(Math.random()<0.5){ dmg*=3; log("<b><span class='damage'>치명적인 암살 일격!!</span></b>");} break;
-                case "환영분신": dmg = calcDamage(player.atk * 3.0, currentMonster.def); player.evadeRate += 10; break;
-                case "헤드샷": dmg = calcDamage(player.atk * 3.5, currentMonster.def * 0.2); break;
-                case "폭풍우": dmg = calcDamage(player.atk * 3.0, currentMonster.def); break;
+                case "극발도": dmg = calcDamage(player.atk * 3.5, 0); break; case "광란": dmg = calcDamage(player.atk * 4.0, currentMonster.def); player.hp -= 20; break;
+                case "메테오": dmg = calcDamage(player.atk * 4.5, currentMonster.def); break; case "헤드샷": dmg = calcDamage(player.atk * 3.5, currentMonster.def * 0.2); break;
+                case "생명흡수": dmg = calcDamage(player.atk * 2.5, currentMonster.def); player.hp = Math.min(player.maxHp, player.hp+Math.floor(dmg*0.3)); break;
+                case "절명": dmg = calcDamage(player.atk * 2.0, currentMonster.def); if(Math.random()<0.5) dmg*=3; break;
+                case "환영분신": dmg = calcDamage(player.atk * 3.0, currentMonster.def); player.evadeRate += 10; break; case "폭풍우": dmg = calcDamage(player.atk * 3.0, currentMonster.def); break;
             }
         }
-
-        if (Math.random() < (parseFloat(player.comboRate) / 100)) { log(`<b><span class='epic'>🌪️ 연격 발동!! 2번 공격합니다!</span></b>`); dmg *= 2; }
-        if (currentMonster.trait === "암살" && Math.random() < 0.15) { log(`<span class='trait-text'>적중 실패! 그림자 속으로 회피했습니다!</span>`); next(); return; }
-        if (currentMonster.trait === "단단함") { dmg = Math.floor(dmg * 0.8); log(`<span class='trait-text'>적의 단단한 피부에 막혀 피해가 감소했습니다.</span>`); }
+        if (Math.random() < (player.comboRate/100)) { log(`<b><span class='epic'>🌪️ 연격 2배!</span></b>`); dmg *= 2; }
+        if (currentMonster.trait === "암살" && Math.random() < 0.15) { log(`적 회피!`); next(); return; }
+        if (currentMonster.trait === "단단함") dmg = Math.floor(dmg * 0.8);
 
         log(`적에게 <span class='highlight'>${dmg}</span> 피해!`); currentMonster.hp -= dmg;
-        if (currentMonster.hp > 0 && player.hasMercenary) { let mDmg = calcDamage(50, currentMonster.def); currentMonster.hp -= mDmg; log(`<span class='heal'>🛡️ 용병 지원! (${mDmg} 피해)</span>`); }
+        if (currentMonster.hp > 0 && player.hasMercenary) { let md = calcDamage(50, currentMonster.def); currentMonster.hp -= md; log(`<span class='heal'>용병 지원 (${md})</span>`); }
 
-        if (isRaidMode) { totalRaidDmg += dmg; log(`<span style='color:#00ffff;'>용에게 누적 데미지: ${totalRaidDmg.toLocaleString()}</span>`); next(); return; }
-        if (currentMonster.hp <= 0) { winCombat(); } else { next(); }
+        if (isRaidMode) { totalRaidDmg += dmg; log(`<span style='color:#00ffff;'>누적: ${totalRaidDmg.toLocaleString()}</span>`); next(); return; }
+        if (currentMonster.hp <= 0) winCombat(); else next();
     }
 
     function doEnemyAction(next) {
-        if (Math.random() < (player.evadeRate / 100)) { log(`<span class='heal'>💨 적의 공격을 회피했습니다!</span>`); next(); return; }
-        
-        if (isRaidMode) {
-            let trueDmg = Math.floor(player.maxHp * 0.3); player.hp -= trueDmg;
-            log(`<span class='damage'>🐉 마룡의 브레스! 방어력 무시 ${trueDmg}의 고정 피해!</span>`);
-            if (player.hp <= 0) { player.hp = 0; endRaid(); } else { next(); } return;
-        }
+        if (Math.random() < (player.evadeRate/100)) { log(`<span class='heal'>회피 성공!</span>`); next(); return; }
+        if (isRaidMode) { let td = Math.floor(player.maxHp * 0.3); player.hp -= td; log(`<span class='damage'>🐉 마룡 고정피해 (${td})!</span>`); if(player.hp<=0){player.hp=0; endRaid();} else next(); return; }
 
         let eDmg = calcDamage(currentMonster.atk, player.def);
-        let mCritChance = currentMonster.trait === "암살" ? 0.25 : 0.1; 
-        if (Math.random() < mCritChance) { eDmg = Math.floor(eDmg * 1.5); log(`<span class='damage'>⚠️ 적의 치명타!!</span>`); }
-        
-        player.hp -= eDmg; log(`<span class='damage'>적의 공격! ${eDmg} 피해!</span>`);
-        
-        if (currentMonster.trait === "흡혈") {
-            let vampHeal = Math.floor(eDmg * 0.3); currentMonster.hp = Math.min(currentMonster.maxHp, currentMonster.hp + vampHeal);
-            log(`<span class='trait-text'>적의 [흡혈]! 체력을 ${vampHeal}만큼 강탈당했습니다!</span>`);
-        }
-
-        if (player.hp <= 0) { player.hp = 0; gameOver(); } else { next(); }
+        if (Math.random() < (currentMonster.trait==="암살"?0.25:0.1)) { eDmg = Math.floor(eDmg * 1.5); log(`<span class='damage'>적 치명타!</span>`); }
+        player.hp -= eDmg; log(`<span class='damage'>적 공격! (${eDmg} 피해)</span>`);
+        if (currentMonster.trait === "흡혈") currentMonster.hp = Math.min(currentMonster.maxHp, currentMonster.hp + Math.floor(eDmg*0.3));
+        if (player.hp <= 0) { player.hp = 0; gameOver(); } else next();
     }
 
     function endPhase() {
         if (!currentMonster || isDead) return;
-
-        if (isRaidMode) {
-            raidTurn--; log(`<hr><span class='epic'>[마계 토벌전] 남은 턴: ${raidTurn}턴</span>`);
-            if (raidTurn <= 0) { endRaid(); } else { updateUI(); autoSave(); }
-            return;
-        }
-
-        if (currentMonster.trait === "파멸") {
-            let atkBoost = Math.max(1, Math.floor(currentMonster.atk * 0.15)); currentMonster.atk += atkBoost;
-            log(`<span class='trait-text'>[파멸] 전투가 길어지며 적의 공격력이 미친듯이 상승합니다! (+${atkBoost})</span>`);
-        }
-        if (currentMonster.trait === "맹독") {
-            let poisonDmg = Math.max(1, Math.floor(player.maxHp * 0.05)); player.hp -= poisonDmg;
-            log(`<span class='trait-text'>[맹독] 중독으로 인해 ${poisonDmg}의 지속 피해를 입었습니다!</span>`);
-            if (player.hp <= 0) { player.hp = 0; gameOver(); return; }
-        }
-        if (currentMonster.trait === "재생" && currentMonster.hp < currentMonster.maxHp) {
-            let regenHeal = Math.floor(currentMonster.maxHp * 0.05); currentMonster.hp = Math.min(currentMonster.maxHp, currentMonster.hp + regenHeal);
-            log(`<span class='trait-text'>[재생] 적이 체력을 ${regenHeal}만큼 회복했습니다!</span>`);
-        }
-
-        if (player.pet && player.pet.hpRegen > 0 && player.hp < player.maxHp) { 
-            player.hp = Math.min(player.maxHp, player.hp + player.pet.hpRegen); 
-            log(`<span class='heal'>🐾 펫 회복 (+${player.pet.hpRegen} HP).</span>`); 
-        } 
+        if (isRaidMode) { raidTurn--; log(`<span class='epic'>[남은 턴: ${raidTurn}]</span>`); if (raidTurn<=0) endRaid(); else{updateUI();autoSave();} return; }
+        if (currentMonster.trait === "파멸") currentMonster.atk += Math.max(1, Math.floor(currentMonster.atk*0.15));
+        if (currentMonster.trait === "맹독") { player.hp -= Math.max(1, Math.floor(player.maxHp*0.05)); if(player.hp<=0){player.hp=0; gameOver(); return;} }
+        if (currentMonster.trait === "재생") currentMonster.hp = Math.min(currentMonster.maxHp, currentMonster.hp + Math.floor(currentMonster.maxHp*0.05));
+        if (player.pet && player.pet.hpRegen > 0) player.hp = Math.min(player.maxHp, player.hp + player.pet.hpRegen); 
         updateUI(); autoSave();
     }
 
     function winCombat() {
-        log(`<b><span style='color: #3498db;'>승리!</span></b> (EXP: ${currentMonster.exp}, Gold: ${currentMonster.gold})`);
-        player.exp += currentMonster.exp; player.gold += currentMonster.gold;
-
-        let bonusHp = Math.floor(Math.random() * 3) + 2; let bonusAtk = Math.random() < 0.4 ? 1 : 0; let bonusDef = Math.random() < 0.3 ? 1 : 0;
-        player.absHp += bonusHp; player.absAtk += bonusAtk; player.absDef += bonusDef; calcStats();
-        player.hp = Math.min(player.maxHp, player.hp + Math.floor(bonusHp * Math.pow(1.2, player.reincarnation)));
-        log(`<span class='epic'>🔮 적의 정수 흡수! [누적 HP+${bonusHp}${bonusAtk>0?', 공+1':''}${bonusDef>0?', 방+1':''}]</span>`);
-
-        let isBoss = player.floor % 5 === 0;
-        if (Math.random() < (isBoss ? 1.0 : 0.6)) { player.inventory["강화석"] = (player.inventory["강화석"] || 0) + 1; log(`<span style='color: #e67e22;'>💎 [강화석] 획득!</span>`); }
-        if (isBoss && Math.random() < 0.8) { player.scrolls++; log(`<span class='highlight'>📜 [파괴 방지 주문서] 획득!!</span>`); }
-
-        checkLevelUp(); currentMonster = null; 
+        log(`<b><span style='color:#3498db;'>승리!</span></b>`); player.exp += currentMonster.exp; player.gold += currentMonster.gold;
+        let bHp = Math.floor(Math.random()*3)+2; let bAtk = Math.random()<0.4?1:0; let bDef = Math.random()<0.3?1:0;
+        player.absHp += bHp; player.absAtk += bAtk; player.absDef += bDef; calcStats();
+        player.hp = Math.min(player.maxHp, player.hp + Math.floor(bHp * Math.pow(1.2, player.reincarnation)));
         
-        // 맵에서 몬스터 제거하고 다음 층 포탈 생성
-        mapEntities = mapEntities.filter(e => e.icon !== '👹');
-        mapEntities.push({ x: 5, y: 3, icon: '🔼', onInteract: () => nextFloor() });
-        enterMapMode(); drawMap(); updateUI(); autoSave();
+        let iB = player.floor % 5 === 0;
+        if (Math.random() < (iB?1.0:0.6)) player.inventory["강화석"] = (player.inventory["강화석"]||0)+1;
+        if (iB && Math.random() < 0.8) player.scrolls++;
+        
+        checkLevelUp(); currentMonster = null; 
+        // 맵에서 쓰러뜨린 몬스터 지우기
+        if(currentInteractingEntity) mapEntities = mapEntities.filter(e => e !== currentInteractingEntity);
+        enterMapMode(); updateUI(); autoSave();
     }
 
     function endRaid() {
-        isRaidMode = false; currentMonster = null;
-        let reward = Math.floor(totalRaidDmg * 2.5); player.gold += reward;
-        log(`<hr><b><span class='epic' style='font-size: 22px;'>🌌 토벌전 종료!</span></b>`);
-        log(`마룡에게 총 <span class='highlight'>${totalRaidDmg.toLocaleString()}</span>의 데미지를 입혔습니다!`);
-        log(`보상으로 <span style='color:#f1c40f; font-weight:bold;'>${reward.toLocaleString()} G</span>를 획득했습니다.`);
-        
-        player.hp = player.maxHp; isDead = false;
-        document.querySelectorAll("button").forEach(b => b.disabled = false);
+        isRaidMode = false; currentMonster = null; let rew = Math.floor(totalRaidDmg * 2.5); player.gold += rew;
+        log(`<hr><b><span class='epic'>토벌 종료!</span></b> 보상: ${rew.toLocaleString()}G`);
+        player.hp = player.maxHp; isDead = false; document.querySelectorAll("button").forEach(b => b.disabled = false);
         loadTownMap(); updateUI(); autoSave();
     }
 
     function checkLevelUp() {
-        let leveledUp = false;
-        while (player.exp >= player.maxExp) {
-            player.level++; player.exp -= player.maxExp; player.maxExp = Math.floor(player.maxExp * 1.4);
-            leveledUp = true; log(`<b><span class='highlight'>🎉 LEVEL UP! (Lv.${player.level})</span></b>`);
-            if(player.level === 10 && !player.promoted) log("<b><span style='color:#2ecc71'>[알림] 레벨 10 달성! 촌장에게 가보세요.</span></b>");
-        }
-        if (leveledUp) { calcStats(); player.hp = player.maxHp; player.mp = player.maxMp; }
+        let lvup = false;
+        while (player.exp >= player.maxExp) { player.level++; player.exp -= player.maxExp; player.maxExp = Math.floor(player.maxExp * 1.4); lvup = true; log(`<b><span class='highlight'>🎉 LEVEL UP!</span></b>`); }
+        if (lvup) { calcStats(); player.hp = player.maxHp; player.mp = player.maxMp; }
     }
 
     function gameOver() { 
-        isDead = true; 
-        log("<hr><b><span class='damage' style='font-size: 20px;'>💀 치명상을 입고 쓰러졌습니다...</span></b>"); 
-        
+        isDead = true; log("<hr><b><span class='damage'>💀 사망...</span></b>"); 
         document.querySelectorAll("button").forEach(b => b.disabled = true); 
-        document.querySelectorAll('.menu-section').forEach(el => el.classList.remove('active-actions'));
-        
-        let postCombat = document.getElementById("post-combat-actions");
-        postCombat.classList.add("active-actions");
-        postCombat.innerHTML = `
-            <button onclick="revive()" class="awake-btn" style="width: 100%; padding: 15px; font-size: 15px; margin-bottom: 5px;">✨ 마을에서 부활하기 (골드 10% 감소)</button>
-            <button class="system-btn" onclick="backToCharSelect()" style="width: 100%; background-color: #2980b9;">🔄 캐릭터 선택창으로 나가기</button>
-        `;
-        postCombat.querySelectorAll("button").forEach(b => b.disabled = false); 
-        updateUI(); 
+        toggleMode("post-combat");
+        let pc = document.getElementById("post-combat-actions");
+        pc.innerHTML = `<button onclick="revive()" class="awake-btn" style="width:100%; height:50px;">✨ 부활 (골드 10% 감소)</button>`;
+        pc.querySelectorAll("button").forEach(b => b.disabled = false); updateUI(); 
     }
 
     function revive() {
-        isDead = false;
-        let penalty = Math.floor(player.gold * 0.1); player.gold = Math.max(0, player.gold - penalty); 
-        player.hp = player.maxHp; currentMonster = null; 
-        
-        log(`<hr><span class='heal'>✨ 성녀가 구출했습니다! (사망 페널티: ${penalty}G 상실)</span>`);
-        document.querySelectorAll("button").forEach(b => b.disabled = false);
-        loadTownMap(); updateUI(); autoSave();
+        isDead = false; let pen = Math.floor(player.gold * 0.1); player.gold = Math.max(0, player.gold - pen); 
+        player.hp = player.maxHp; currentMonster = null; log(`<hr><span class='heal'>부활! (-${pen}G)</span>`);
+        document.querySelectorAll("button").forEach(b => b.disabled = false); loadTownMap(); updateUI(); autoSave();
     }
-
 </script>
 
 </body>
