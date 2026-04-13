@@ -157,7 +157,16 @@
 
     <div class="controls">
         <div id="town-actions" class="menu-section active-actions btn-group">
-            <button onclick="enterTower()" class="tower-btn">🏰 탑 등반 (현재 <span id="p-floor-btn">1</span>층)</button>
+            
+            <div style="background-color: #2a0808; padding: 10px; border-radius: 5px; border: 1px solid #c0392b; margin-bottom: 5px;">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 5px;">
+                    <button onclick="changeFloor(-1)" style="flex:1; background-color:#222;">◀ 이전 층</button>
+                    <span style="flex:2; color: #f1c40f; font-weight: bold; font-size: 13px;">도전: <span id="target-floor">1</span> / <span id="max-floor-display">1</span>층</span>
+                    <button onclick="changeFloor(1)" style="flex:1; background-color:#222;">다음 층 ▶</button>
+                </div>
+                <button onclick="enterTower()" class="tower-btn" style="width: 100%; font-size: 14px; padding: 10px;">🏰 <span id="target-floor-btn">1</span>층 진입하기</button>
+            </div>
+            
             <button onclick="rest()">🛏️ 여관 (50G)</button>
             <button onclick="toggleMode('shop')">🏪 무기/방어구 상점</button>
             <button onclick="toggleMode('blacksmith')" class="enhance-btn">🔨 대장간</button>
@@ -249,7 +258,7 @@
     let isCloudMode = false;
     let currentUserEmail = "";
     let autoSaveTimer = null;
-    let cloudSaves = {}; // 모든 직업의 세이브 데이터를 담는 객체
+    let cloudSaves = {}; 
 
     try {
         firebase.initializeApp(firebaseConfig);
@@ -320,7 +329,6 @@
         firebase.firestore().collection("rpg_saves").doc(uid).get().then((doc) => {
             if (doc.exists) {
                 let data = doc.data();
-                // 기존 싱글 세이브 하위호환 처리 (업데이트 전 데이터 마이그레이션)
                 if (data.player && !data["전사"] && !data["마법사"] && !data["도적"] && !data["궁수"]) {
                     let job = data.player.baseJob || data.player.job;
                     cloudSaves = {};
@@ -368,7 +376,6 @@
             baseWeaponAtk = parsed.baseW || 0; 
             baseArmorDef = parsed.baseA || 0;
             
-            // 데이터 누락 방지용 초기값
             if(player.isAwakened === undefined) player.isAwakened = false;
             if(player.reincarnation === undefined) {
                 player.reincarnation = 0; player.soulStones = 0;
@@ -384,38 +391,51 @@
 
     function resetJob(jobName) {
         if (!cloudSaves[jobName]) return;
-        
         if (confirm(`정말로 [${jobName}] 직업의 데이터를 초기화하시겠습니까?\n이 작업은 절대 되돌릴 수 없습니다!`)) {
-            delete cloudSaves[jobName]; // 해당 직업 데이터만 삭제
-            
+            delete cloudSaves[jobName]; 
             if(isCloudMode && firebase.auth().currentUser) {
                 firebase.firestore().collection("rpg_saves").doc(firebase.auth().currentUser.uid).set(cloudSaves);
             }
             alert(`[${jobName}] 데이터가 깔끔하게 초기화되었습니다.`);
-            showStartScreen(); // 화면 갱신
+            showStartScreen(); 
         }
     }
 
     function backToCharSelect() {
-        autoSave(); // 현재 상태 저장 후
-        document.getElementById("log-window").innerHTML = ""; // 로그 지우기
+        autoSave(); 
+        document.getElementById("log-window").innerHTML = ""; 
         showStartScreen();
     }
 
+    // 🔥 이어하기 시 발생하던 잠금 버그 및 데이터 에러 방지 처리 완료
     function resumeGame(jobName) {
         document.getElementById("start-screen").style.display = "none";
-        document.getElementById("skill-name").innerText = player.skill; document.getElementById("skill-cost").innerText = player.skillCost;
-        isDead = false; // 혹시 죽은채로 저장된 버그 방지
+        document.getElementById("login-screen").style.display = "none";
+        
+        // 과거 데이터 누락 예외 처리
+        if(!player.skill) player.skill = jobStats[player.baseJob].skill;
+        if(!player.skillCost) player.skillCost = jobStats[player.baseJob].skillCost;
+        if(!player.maxFloor) player.maxFloor = player.floor;
+        
+        document.getElementById("skill-name").innerText = player.skill; 
+        document.getElementById("skill-cost").innerText = player.skillCost;
+        
+        isDead = false; 
+        currentMonster = null; // 혹시 전투 중에 강종했더라도 마을에서 재시작하도록 초기화
+        
+        // 굳어버린 버튼들 강제 해제
+        document.querySelectorAll("button").forEach(b => b.disabled = false);
+
         calcStats(); toggleMode("town"); updateUI(); 
         log(`<b><span class='epic'>☁️ [${jobName}] 데이터 동기화 완료! 환영합니다.</span></b>`); 
     }
 
     function autoSave() {
-        if(isDead || !player.baseJob) return; // 죽어있을 땐 자동 저장하지 않음 (부활 기회 제공)
+        if(isDead || !player.baseJob) return; 
         clearTimeout(autoSaveTimer);
         autoSaveTimer = setTimeout(() => {
             let saveData = { player: player, baseW: baseWeaponAtk, baseA: baseArmorDef };
-            cloudSaves[player.baseJob] = saveData; // 해당 직업 슬롯에 저장
+            cloudSaves[player.baseJob] = saveData; 
             
             if(isCloudMode && firebase.auth().currentUser) {
                 firebase.firestore().collection("rpg_saves").doc(firebase.auth().currentUser.uid).set(cloudSaves);
@@ -549,6 +569,18 @@
         lw.scrollTop = lw.scrollHeight;
     }
 
+    // 🔥 층수 올리고 내리는 파밍용 함수 추가
+    function changeFloor(dir) {
+        if(!player.maxFloor) player.maxFloor = player.floor;
+        let newFloor = player.floor + dir;
+        
+        if (newFloor < 1) newFloor = 1;
+        if (newFloor > player.maxFloor) newFloor = player.maxFloor;
+        
+        player.floor = newFloor;
+        updateUI();
+    }
+
     function updateUI() {
         if(!player.job) return;
 
@@ -576,7 +608,15 @@
         document.getElementById("p-gold").innerText = player.gold;
         document.getElementById("p-weapon").innerText = player.weapon; document.getElementById("p-enhance").innerText = player.weaponLevel > 0 ? `(+${player.weaponLevel})` : "";
         document.getElementById("p-armor").innerText = player.armor;
-        document.getElementById("p-maxfloor").innerText = player.maxFloor; document.getElementById("p-floor-btn").innerText = player.floor;
+        
+        // 층수 정보 갱신
+        document.getElementById("p-maxfloor").innerText = player.maxFloor; 
+        if(document.getElementById("target-floor")) {
+            document.getElementById("target-floor").innerText = player.floor;
+            document.getElementById("max-floor-display").innerText = player.maxFloor;
+            document.getElementById("target-floor-btn").innerText = player.floor;
+        }
+
         document.getElementById("p-potion").innerText = player.potions; document.getElementById("p-scroll").innerText = player.scrolls;
         document.getElementById("p-merc").innerText = player.hasMercenary ? "고용됨 (공+50)" : "미고용";
         document.getElementById("p-pet").innerText = player.pet ? player.pet.name : "없음";
@@ -610,7 +650,6 @@
         }
     }
 
-    // [중략 방지] 기존의 행동 함수들
     function rest() { if (player.gold >= 50) { player.gold -= 50; player.hp = player.maxHp; player.mp = player.maxMp; log("체력/마나 회복 (-50G)"); updateUI(); autoSave(); } else log("골드 부족!"); }
     function buyPotion() { if (player.gold >= 50) { player.gold -= 50; player.potions++; log("포션 구매 (-50G)"); updateUI(); autoSave(); } else log("골드 부족!"); }
     function buyItem(type, p) { if (player.gold >= p) { player.gold -= p; player.scrolls++; log("📜 파괴 방지 주문서 구매!"); updateUI(); autoSave(); } else log("골드 부족!"); }
@@ -744,7 +783,8 @@
     }
 
     function nextFloor() { 
-        player.floor++; if (player.floor > player.maxFloor) player.maxFloor = player.floor; 
+        player.floor++; 
+        if (player.floor > player.maxFloor) player.maxFloor = player.floor; 
         enterTower(); 
     }
 
@@ -854,7 +894,6 @@
         if (leveledUp) { calcStats(); player.hp = player.maxHp; player.mp = player.maxMp; }
     }
 
-    // 🔥 추가된 사망 및 부활 시스템
     function gameOver() { 
         isDead = true; 
         log("<hr><b><span class='damage' style='font-size: 20px;'>💀 치명상을 입고 쓰러졌습니다...</span></b>"); 
@@ -864,13 +903,11 @@
         document.querySelectorAll('.menu-section').forEach(el => el.classList.remove('active-actions'));
         document.getElementById("post-combat-actions").classList.add("active-actions");
         
-        // 부활 버튼으로 UI 덮어쓰기
         document.getElementById("post-combat-actions").innerHTML = `
             <button onclick="revive()" class="awake-btn" style="width: 100%; padding: 15px; font-size: 15px; margin-bottom: 5px;">✨ 마을에서 부활하기 (골드 10% 감소)</button>
             <button class="system-btn" onclick="backToCharSelect()" style="width: 100%; background-color: #2980b9;">🔄 캐릭터 선택창으로 나가기</button>
         `;
         
-        // 새로 추가한 부활 버튼들은 클릭 가능하게 풀어줌
         document.querySelectorAll("#post-combat-actions button").forEach(b => b.disabled = false); 
         updateUI(); 
     }
@@ -878,16 +915,14 @@
     function revive() {
         isDead = false;
         let penalty = Math.floor(player.gold * 0.1);
-        player.gold = Math.max(0, player.gold - penalty); // 골드 차감
-        player.hp = player.maxHp; // 풀피 회복
-        currentMonster = null; // 몬스터 초기화
+        player.gold = Math.max(0, player.gold - penalty); 
+        player.hp = player.maxHp; 
+        currentMonster = null; 
         
         log(`<hr><span class='heal'>✨ 마을의 성녀가 당신을 구출했습니다! (사망 페널티: ${penalty}G 상실)</span>`);
         
-        // 잠겼던 버튼 다시 풀기
         document.querySelectorAll(".controls button").forEach(b => b.disabled = false);
         
-        // post-combat 창 원래 버튼(다음층/마을)으로 원상복구
         document.getElementById("post-combat-actions").innerHTML = `
             <button onclick="nextFloor()" class="tower-btn">🔼 다음 층으로 계속</button>
             <button onclick="toggleMode('town')">🔙 마을로 귀환</button>
