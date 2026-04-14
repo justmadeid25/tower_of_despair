@@ -1268,7 +1268,14 @@
 }
 
     function endRaid() {
-    let reward = Math.floor(raidTotalDamage / 1000);
+    // 🔥 보상 공식 수정 (1000으로 나누던 것을 없애거나 조절)
+    // 예시: 입힌 데미지와 동일한 양의 골드 지급 (데미지가 2000이면 2000골드)
+    let reward = Math.floor(raidTotalDamage * 0.1); 
+
+    // (선택 사항) 데미지를 너무 못 넣었어도 최소 500골드는 주도록 안전장치 추가
+    if (reward < 500) {
+        reward = 500;
+    }
 
     player.gold += reward;
 
