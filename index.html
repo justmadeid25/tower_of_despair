@@ -1147,6 +1147,175 @@
         player.hp = player.maxHp; currentMonster = null; log(`<hr><span class='heal'>마을에서 부활했습니다. (-${pen}G)</span>`);
         document.querySelectorAll("button").forEach(b => b.disabled = false); loadTownMap(); updateUI(); autoSave();
     }
+
+// ==========================================
+// 🚨 누락되었던 전투 및 진행 함수 복원
+// ==========================================
+
+// 1. 일반 / 보스 전투 시작 (층수에 따른 몬스터 스케일링 적용)
+function startCombat(isBoss) {
+    if (isDead) return;
+    isRaidMode = false;
+    isArenaMode = false;
+    isPvPMode = false;
+
+    // 몬스터 종류 랜덤 선택 (보스일 경우 층수에 맞춰 강한 몬스터 고정)
+    let monsterIndex = Math.floor(Math.random() * monsters.length);
+    if (isBoss) {
+        monsterIndex = Math.min(monsters.length - 1, Math.floor(player.floor / 5));
+    }
+    
+    let baseMonster = monsters[monsterIndex] || monsters[0];
+    currentMonster = JSON.parse(JSON.stringify(baseMonster)); // 원본 데이터 훼손 방지 깊은 복사
+    
+    // 현재 층(floor)에 비례하여 몬스터 능력치 대폭 강화 (스케일링)
+    let scale = 1 + (player.floor * 0.15);
+    currentMonster.hp = Math.floor(currentMonster.hp * scale);
+    currentMonster.maxHp = currentMonster.hp;
+    currentMonster.atk = Math.floor(currentMonster.atk * scale);
+    currentMonster.def = Math.floor(currentMonster.def * scale);
+    currentMonster.exp = Math.floor(currentMonster.exp * scale);
+    currentMonster.gold = Math.floor(currentMonster.gold * scale);
+    
+    if (isBoss) {
+        currentMonster.hp = Math.floor(currentMonster.hp * 2);
+        currentMonster.maxHp = currentMonster.hp;
+        currentMonster.atk = Math.floor(currentMonster.atk * 1.5);
+        currentMonster.name = "👑 [보스] " + currentMonster.name;
+    }
+
+    log(`<hr><b><span class='damage'>[${currentMonster.name}]</span></b>이(가) 앞을 가로막습니다! 전투를 준비하세요!`);
+    
+    // 전투 화면 UI 모드로 전환
+    toggleMode("combat"); 
+    updateCombatUI();
+}
+
+// 2. 계단 진입 시 다음 층으로 이동
+function nextFloor() {
+    player.floor++;
+    log(`<b><span class='highlight'>계단을 발견했습니다! [${player.floor}층]으로 올라갑니다.</span></b>`);
+    
+    // 퀘스트 달성도 갱신
+    if (player.quests) {
+        player.quests.floor = Math.max(player.quests.floor || 0, player.floor);
+    }
+    
+    enterTower(); // 맵 다시 그리기
+    updateUI();
+    autoSave();
+}
+
+// 3. 투기장(무한 방어전) 입장
+function startArenaCombat() {
+    if (isDead) return;
+    isArenaMode = true;
+    isRaidMode = false;
+    isPvPMode = false;
+    
+    let m = JSON.parse(JSON.stringify(monsters[Math.floor(Math.random() * monsters.length)]));
+    
+    // 투기장은 일반 몬스터보다 강하지만 경험치/골드를 2배로 줌
+    let scale = 2 + (Math.random() * 2);
+    m.hp = Math.floor(m.hp * scale);
+    m.maxHp = m.hp;
+    m.atk = Math.floor(m.atk * scale);
+    m.def = Math.floor(m.def * scale);
+    m.exp = Math.floor(m.exp * scale * 2); 
+    m.gold = Math.floor(m.gold * scale * 2); 
+
+    currentMonster = m;
+    currentMonster.name = "🏟️ [투기장] " + m.name;
+    
+    log(`<hr>투기장 맹수 <b><span class='damage'>${m.name}</span></b> 출현!`);
+    toggleMode("combat");
+    updateCombatUI();
+}
+
+// 버튼 클릭 시 호출되는 투기장 진입 함수
+function startArena() {
+    if (player.gold < 1000) return log("<span class='damage'>골드가 부족합니다! (1,000G 필요)</span>");
+    player.gold -= 1000;
+    log("투기장 입장료를 지불했습니다.");
+    updateUI();
+    startArenaCombat();
+}
+
+// 4. 차원의 마룡 토벌전(레이드) 입장
+function enterRaid() {
+    if (isDead || !checkRaidCooldown()) return; 
+    
+    isRaidMode = true;
+    isArenaMode = false;
+    isPvPMode = false;
+    
+    // 입장 시간 기록
+    player.lastRaidTime = Date.now();
+    autoSave();
+    
+    // 압도적인 체력과 방어력 무시 기믹(플레이어 최대 체력 비례 데미지)을 가진 레이드 보스
+    currentMonster = {
+        name: "🐉 차원의 마룡",
+        hp: 999999999,
+        maxHp: 999999999,
+        atk: Math.floor(player.maxHp * 0.3), // 무조건 최대 체력의 30%를 깎음
+        def: player.atk * 0.8,
+        exp: 50000,
+        gold: 50000,
+        speed: 150,
+        trait: "파멸"
+    };
+
+    log(`<hr><span class='epic'>하늘이 찢어지며 <b>차원의 마룡</b>이 강림했습니다! 최대한 버텨내세요!</span>`);
+    toggleMode("combat");
+    updateCombatUI();
+}
+
+// 5. 레이드 쿨타임(5분) 검사 로직
+function checkRaidCooldown() {
+    let now = Date.now();
+    let cooldown = 5 * 60 * 1000; // 5분
+    
+    if (!player.lastRaidTime) player.lastRaidTime = 0;
+    
+    let diff = now - player.lastRaidTime;
+    if (diff < cooldown) {
+        let remain = Math.ceil((cooldown - diff) / 1000);
+        log(`<span class='damage'>아직 마룡이 출현할 때가 아닙니다. (${remain}초 남음)</span>`);
+        return false;
+    }
+    return true;
+}
+
+// 6. UI에서 쿨타임 텍스트 실시간 업데이트 (1초마다 자동 실행)
+setInterval(() => {
+    let raidText = document.getElementById("raid-cooldown-text");
+    let raidBtn = document.getElementById("btn-raid");
+    if (!raidText || !player) return;
+    
+    if (!player.lastRaidTime) {
+        raidText.innerText = "지금 즉시 토벌 가능!";
+        raidText.style.color = "#2ecc71";
+        if(raidBtn) raidBtn.disabled = false;
+        return;
+    }
+    
+    let diff = Date.now() - player.lastRaidTime;
+    let cooldown = 5 * 60 * 1000; 
+    
+    if (diff < cooldown) {
+        let remain = Math.ceil((cooldown - diff) / 1000);
+        let m = Math.floor(remain / 60);
+        let s = remain % 60;
+        raidText.innerText = `다음 출현까지: ${m}분 ${s}초`;
+        raidText.style.color = "#e74c3c";
+        if(raidBtn) raidBtn.disabled = true;
+    } else {
+        raidText.innerText = "지금 즉시 토벌 가능!";
+        raidText.style.color = "#2ecc71";
+        if(raidBtn) raidBtn.disabled = false;
+    }
+}, 1000);
 </script>
 
 </body>
