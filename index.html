@@ -354,8 +354,6 @@
                     <p style="font-size:12px; color:#aaa; text-align:center;">마룡 토벌 쿨타임 (5분)</p>
                     <p id="raid-cooldown-text" style="color:#f1c40f; text-align:center; font-weight:bold; margin:5px 0;"></p>
                     <button onclick="enterRaid()" id="btn-raid" style="width:100%; height:50px; background:#4a235a; color:#f1c40f; border-color:#3a184a; box-shadow:0 4px 0 #3a184a; margin-bottom:12px;">🐉 마룡 토벌전 (10턴 생존)</button>
-                    <button onclick="startArena()" 
-    style="width:100%; height:50px; background:#2c3e50; color:white; margin-bottom:12px;">🏟️ 투기장 입장 (1000G)</button>
                     <div style="background:#0a0a0f; padding:12px; border-radius:6px; border:1px solid #00ffff;">
                         <h4 style="margin:0 0 8px 0; color:#00ffff;">🔮 유물 강화</h4>
                         <button onclick="upgradeRelic()" style="width:100%; background:#002222; border-color:#00ffff; color:#00ffff; box-shadow:0 4px 0 #005555;">⚡ 스탯 누적 (<span id="relic-cost-ui">10만</span>G)</button>
@@ -1047,22 +1045,17 @@
 
     // 🔥 레이드 모드
     if (isRaidMode) {
-
         if (action === 'skill' && player.mp < player.skillCost) return log("마나 부족!");
         if (action === 'heal' && player.potions <= 0) return log("포션 없음!");
 
         doPlayerAction(action, () => {
-
             raidTurn++;
             log(`🌌 [레이드 턴 ${raidTurn}/${maxRaidTurn}]`);
-
             updateUI();
-
             if (raidTurn >= maxRaidTurn) {
                 endRaid();
             }
         });
-
         return;
     }
 
@@ -1220,49 +1213,59 @@
         updateUI(); autoSave();
     }
 
-    function winCombat() {
+   function winCombat() {
+    // 🔥 투기장 승리 (웨이브 클리어) 로직
     if (isArenaMode) {
+        // 투기장 변수가 없으면 초기화
+        if (typeof arenaTotalGold === 'undefined') window.arenaTotalGold = 0;
+        if (typeof arenaTotalExp === 'undefined') window.arenaTotalExp = 0;
+        if (typeof arenaWave === 'undefined') window.arenaWave = 1;
 
         arenaTotalGold += currentMonster.gold;
         arenaTotalExp += currentMonster.exp;
-
-        log(`<span class='heal'>✔ 처치! 누적 골드: ${arenaTotalGold}</span>`);
+        
+        log(`<span class='heal'>✔ 처치! 누적 골드: ${arenaTotalGold.toLocaleString()}G</span>`);
 
         arenaWave++;
+        log(`<hr><b><span style='color:#e67e22;'>투기장 ${arenaWave}웨이브 몬스터 난입!</span></b>`);
+        
+        // 5웨이브마다 영혼석 지급
+        if (arenaWave % 5 === 0) { 
+            player.soulstone = (player.soulstone || 0) + 1; 
+            log(`<b><span class='epic'>[연승 특별 보상] 영혼석 1개를 획득했습니다!</span></b>`); 
+        }
 
-    // 🔥 다음 몬스터 바로 생성
-        spawnArenaMonster();
+        updateUI();
 
+        // 0.8초 뒤 다음 몬스터 생성 (이름 수정됨)
+        setTimeout(() => startArenaCombat(), 800); 
         return;
-       }
-        if(isPvPMode) {
-            log(`<hr><b><span class='epic'>결투 승리!! 보상으로 ${currentMonster.gold.toLocaleString()}G를 획득했습니다!</span></b>`);
-            player.gold += currentMonster.gold; player.exp += currentMonster.exp;
-            isPvPMode = false; currentMonster = null; checkLevelUp(); enterMapMode(); updateUI(); autoSave(); return;
-        }
-
-        log(`<b><span style='color:#3498db;'>승리!</span></b>`); player.exp += currentMonster.exp; player.gold += currentMonster.gold;
-        if(!player.quests) player.quests = { killed: 0 }; player.quests.killed++;
-        let bHp = Math.floor(Math.random()*3)+2; let bAtk = Math.random()<0.4?1:0; let bDef = Math.random()<0.3?1:0;
-        player.absHp += bHp; player.absAtk += bAtk; player.absDef += bDef; calcStats(); player.hp = Math.min(player.maxHp, player.hp + Math.floor(bHp * Math.pow(1.2, player.reincarnation)));
-        
-        let iB = player.floor % 5 === 0;
-        if (Math.random() < (iB?1.0:0.6)) player.inventory["강화석"] = (player.inventory["강화석"]||0)+1;
-        if (iB && Math.random() < 0.8) player.scrolls++;
-        if (Math.random() < 0.1) dropCard(currentMonster.name);
-        if (Math.random() < 0.25) { player.inventory["미확인 씨앗"] = (player.inventory["미확인 씨앗"] || 0) + 1; log("<b><span style='color:#2ecc71;'>[미확인 씨앗]을 획득했습니다! 온실에서 재배하세요.</span></b>"); }
-
-        checkLevelUp(); 
-        
-        if (isArenaMode) {
-            arenaWave++; log(`<hr><b><span style='color:#e67e22;'>투기장 ${arenaWave}웨이브 몬스터 난입!</span></b>`);
-            if (arenaWave % 5 === 0) { player.soulStones++; log(`<b><span class='epic'>[연승 특별 보상] 영혼석 +1 획득!</span></b>`); }
-            setTimeout(() => startArenaCombat(), 800); return;
-        }
-
-        if (currentInteractingEntity) { mapEntities = mapEntities.filter(e => e !== currentInteractingEntity); currentInteractingEntity = null; }
-        currentMonster = null; enterMapMode(); updateUI(); autoSave();
     }
+
+    // 🔥 PvP 결투장 승리
+    if(isPvPMode) {
+        log(`<hr><b><span class='epic'>결투 승리!! 보상으로 ${currentMonster.gold.toLocaleString()}G를 획득했습니다!</span></b>`);
+        player.gold += currentMonster.gold; player.exp += currentMonster.exp;
+        isPvPMode = false; currentMonster = null; checkLevelUp(); enterMapMode(); updateUI(); autoSave(); return;
+    }
+
+    // 🔥 일반 몬스터 / 보스 승리
+    log(`<b><span style='color:#3498db;'>승리!</span></b>`); player.exp += currentMonster.exp; player.gold += currentMonster.gold;
+    if(!player.quests) player.quests = { killed: 0 }; player.quests.killed++;
+    let bHp = Math.floor(Math.random()*3)+2; let bAtk = Math.random()<0.4?1:0; let bDef = Math.random()<0.3?1:0;
+    player.absHp += bHp; player.absAtk += bAtk; player.absDef += bDef; calcStats(); player.hp = Math.min(player.maxHp, player.hp + Math.floor(bHp * Math.pow(1.2, player.reincarnation)));
+    
+    let iB = player.floor % 5 === 0;
+    if (Math.random() < (iB?1.0:0.6)) player.inventory["강화석"] = (player.inventory["강화석"]||0)+1;
+    if (iB && Math.random() < 0.8) player.scrolls++;
+    if (Math.random() < 0.1) dropCard(currentMonster.name);
+    if (Math.random() < 0.25) { player.inventory["미확인 씨앗"] = (player.inventory["미확인 씨앗"] || 0) + 1; log("<b><span style='color:#2ecc71;'>[미확인 씨앗]을 획득했습니다! 온실에서 재배하세요.</span></b>"); }
+
+    checkLevelUp(); 
+    
+    if (currentInteractingEntity) { mapEntities = mapEntities.filter(e => e !== currentInteractingEntity); currentInteractingEntity = null; }
+    currentMonster = null; enterMapMode(); updateUI(); autoSave();
+}
 
     function endRaid() {
     let reward = Math.floor(raidTotalDamage / 1000);
@@ -1384,6 +1387,25 @@ function nextFloor() {
 }
 
 // 3. 투기장(무한 방어전) 입장
+function startArena() {
+    if (isDead) return;
+
+    // 입장료 1,000G 확인
+    if (player.gold < 1000) {
+        log("<span class='damage'>골드가 부족합니다. (1,000G 필요)</span>");
+        return;
+    }
+
+    // 골드 차감 및 UI 업데이트
+    player.gold -= 1000;
+    updateUI(); // 또는 document.getElementById("p-gold").innerText = player.gold;
+
+    log("<span class='highlight'>1,000G를 지불하고 무한 방어전에 입장했습니다!</span>");
+    
+    // 전투 로직 호출
+    startArenaCombat();
+}
+
 function startArenaCombat() {
     if (isDead) return;
 
