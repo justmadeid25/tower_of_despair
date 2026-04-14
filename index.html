@@ -354,6 +354,8 @@
                     <p style="font-size:12px; color:#aaa; text-align:center;">마룡 토벌 쿨타임 (5분)</p>
                     <p id="raid-cooldown-text" style="color:#f1c40f; text-align:center; font-weight:bold; margin:5px 0;"></p>
                     <button onclick="enterRaid()" id="btn-raid" style="width:100%; height:50px; background:#4a235a; color:#f1c40f; border-color:#3a184a; box-shadow:0 4px 0 #3a184a; margin-bottom:12px;">🐉 마룡 토벌전 (10턴 생존)</button>
+                    <button onclick="startArena()" 
+    style="width:100%; height:50px; background:#2c3e50; color:white; margin-bottom:12px;">🏟️ 투기장 입장 (1000G)</button>
                     <div style="background:#0a0a0f; padding:12px; border-radius:6px; border:1px solid #00ffff;">
                         <h4 style="margin:0 0 8px 0; color:#00ffff;">🔮 유물 강화</h4>
                         <button onclick="upgradeRelic()" style="width:100%; background:#002222; border-color:#00ffff; color:#00ffff; box-shadow:0 4px 0 #005555;">⚡ 스탯 누적 (<span id="relic-cost-ui">10만</span>G)</button>
@@ -790,15 +792,34 @@
         document.getElementById("q-floor-progress").innerText = `${player.maxFloor} / 50`; document.getElementById("q-floor-bar").style.width = Math.min(100, (player.maxFloor / 50) * 100) + "%";
         document.getElementById("q-gold-progress").innerText = `${Math.floor(player.gold/1000)}k / 100k`; document.getElementById("q-gold-bar").style.width = Math.min(100, (player.gold / 100000) * 100) + "%";
 
-        if (currentMonster) {
-            document.getElementById("m-hp").innerText = currentMonster.hp; document.getElementById("m-maxhp").innerText = currentMonster.maxHp === 999999999 ? "∞" : currentMonster.maxHp;
-            document.getElementById("m-hp-bar").style.width = Math.max(0, (currentMonster.hp / currentMonster.maxHp) * 100) + "%";
-            document.getElementById("m-atk").innerText = currentMonster.atk; document.getElementById("m-def").innerText = currentMonster.def;
-            document.getElementById("m-speed").innerText = currentMonster.speed; 
-            document.getElementById("m-floor").innerText = isRaidMode ? "레이드" : (isArenaMode ? "투기장" : (isPvPMode ? "결투장" : player.floor)); 
-            document.getElementById("m-name").innerText = currentMonster.name; document.getElementById("m-trait").innerText = monsterTraits[currentMonster.trait].text;
-            document.getElementById("skill-cost").innerText = jobStats[player.job].skillCost;
-        }
+        if (currentMonster && activeMenuMode === 'combat') {
+
+    document.getElementById("m-hp").innerText = currentMonster.hp;
+    document.getElementById("m-maxhp").innerText =
+        currentMonster.maxHp === 999999999 ? "∞" : currentMonster.maxHp;
+
+    document.getElementById("m-hp-bar").style.width =
+        Math.max(0, (currentMonster.hp / currentMonster.maxHp) * 100) + "%";
+
+    document.getElementById("m-atk").innerText = currentMonster.atk;
+    document.getElementById("m-def").innerText = currentMonster.def;
+    document.getElementById("m-speed").innerText = currentMonster.speed;
+
+    // 🔥 이름 표시 (층 포함)
+    document.getElementById("m-name").innerText =
+        `[${player.floor}층] ${currentMonster.name}`;
+
+    // 🔥 trait 안전 처리
+    let traitData = monsterTraits[currentMonster.trait];
+    document.getElementById("m-trait").innerText =
+        traitData ? traitData.text : "";
+
+    document.getElementById("m-floor").innerText =
+        isRaidMode ? "레이드" :
+        isArenaMode ? "투기장" :
+        isPvPMode ? "결투장" :
+        player.floor;
+}
     }
 
     // ==========================================
@@ -1016,52 +1037,159 @@
     // ==========================================
     // 7. 전투 로직 (PvP 결투장 기능 포함)
     // ==========================================
-    function calcDamage(atk, def) { let b = atk - def; return Math.floor((b < 1 ? 1 : b) * (0.9 + Math.random() * 0.2)); }
+    function calcDamage(atk, def) {
+    let damage = atk * (100 / (100 + def));
+    return Math.floor(damage * (0.9 + Math.random() * 0.2));
+}
 
-    function startTurn(action) {
-        if (!currentMonster || isDead) return;
-        if (action === 'skill' && player.mp < player.skillCost) return log("마나 부족!"); if (action === 'heal' && player.potions <= 0) return log("포션 없음!");
-        if (action === "run" || action === "heal" || player.speed >= currentMonster.speed) {
-            if (player.speed >= currentMonster.speed && action !== "run" && action !== "heal") log(`<span class='highlight'>⚡ 선공!</span>`);
-            doPlayerAction(action, () => { if (currentMonster && currentMonster.hp > 0 && !isRaidMode) doEnemyAction(() => endPhase()); else if(isRaidMode && !isDead) doEnemyAction(() => endPhase()); });
-        } else { log(`<span class='damage'>⚡ 적 선공!</span>`); doEnemyAction(() => { if (!isDead && currentMonster) doPlayerAction(action, () => endPhase()); }); }
+  function startTurn(action) {
+    if (!currentMonster || isDead) return;
+
+    // 🔥 레이드 모드
+    if (isRaidMode) {
+
+        if (action === 'skill' && player.mp < player.skillCost) return log("마나 부족!");
+        if (action === 'heal' && player.potions <= 0) return log("포션 없음!");
+
+        doPlayerAction(action, () => {
+
+            raidTurn++;
+            log(`🌌 [레이드 턴 ${raidTurn}/${maxRaidTurn}]`);
+
+            updateUI();
+
+            if (raidTurn >= maxRaidTurn) {
+                endRaid();
+            }
+        });
+
+        return;
     }
+
+    // 🔻 일반 전투
+    if (action === 'skill' && player.mp < player.skillCost) return log("마나 부족!");
+    if (action === 'heal' && player.potions <= 0) return log("포션 없음!");
+
+    if (action === "run" || action === "heal" || player.speed >= currentMonster.speed) {
+        if (player.speed >= currentMonster.speed && action !== "run" && action !== "heal")
+            log(`<span class='highlight'>⚡ 선공!</span>`);
+
+        doPlayerAction(action, () => {
+            if (currentMonster && currentMonster.hp > 0)
+                doEnemyAction(() => endPhase());
+        });
+
+    } else {
+        log(`<span class='damage'>⚡ 적 선공!</span>`);
+        doEnemyAction(() => {
+            if (!isDead && currentMonster)
+                doPlayerAction(action, () => endPhase());
+        });
+    }
+}
 
     function doPlayerAction(type, next) {
-        if (type === "run") {
-            if (isRaidMode) return log("레이드 도주 불가!");
-            if (isPvPMode) { log("<b><span style='color:#e74c3c;'>결투장에서 기권했습니다.</span></b>"); player.hp=1; isPvPMode=false; currentMonster=null; enterMapMode(); updateUI(); return; }
-            if (isArenaMode) { log("<b><span style='color:#e67e22;'>투기장 전투를 중단하고 무사히 빠져나왔습니다.</span></b>"); isArenaMode = false; currentMonster = null; currentInteractingEntity = null; loadTownMap(); updateUI(); autoSave(); return; }
-            if (Math.random() < 0.3) { log("도망 성공!"); currentMonster = null; enterMapMode(); return; } else { log("도망 실패!"); next(); return; }
-        }
-        if (type === "heal") { player.potions--; player.hp = Math.min(player.maxHp, player.hp + 150); log(`<span class='heal'>포션 회복 (+150).</span>`); next(); return; }
 
-        let dmg = 0;
-        if (type === "attack") { dmg = calcDamage(player.atk, currentMonster.def); if (Math.random() < (player.critRate/100)) { dmg*=2; log(`<b><span class='highlight'>크리티컬!</span></b>`); } } 
-        else if (type === "skill") {
-            player.mp -= player.skillCost;
-            switch(player.skill) {
-                case "대지가르기": case "파이어볼": case "연속베기": case "조준사격": dmg = calcDamage(player.atk * 2.5, currentMonster.def * 0.5); break;
-                case "극발도": dmg = calcDamage(player.atk * 3.5, 0); break; case "광란": dmg = calcDamage(player.atk * 4.0, currentMonster.def); player.hp -= 20; break;
-                case "메테오": dmg = calcDamage(player.atk * 4.5, currentMonster.def); break; case "헤드샷": dmg = calcDamage(player.atk * 3.5, currentMonster.def * 0.2); break;
-                case "생명흡수": dmg = calcDamage(player.atk * 2.5, currentMonster.def); player.hp = Math.min(player.maxHp, player.hp+Math.floor(dmg*0.3)); break;
-                case "절명": dmg = calcDamage(player.atk * 2.0, currentMonster.def); if(Math.random()<0.5) dmg*=3; break;
-                case "환영분신": dmg = calcDamage(player.atk * 3.0, currentMonster.def); player.evadeRate += 10; break; case "폭풍우": dmg = calcDamage(player.atk * 3.0, currentMonster.def); break;
-                case "궁극검무": dmg = calcDamage(player.atk * 5.0, 0); break; case "피의축제": dmg = calcDamage(player.atk * 6.0, currentMonster.def); player.hp -= 50; break;
-                case "아마겟돈": dmg = calcDamage(player.atk * 7.0, currentMonster.def * 0.5); break; case "그림자참수": dmg = calcDamage(player.atk * 4.0, currentMonster.def); if(Math.random()<0.4) dmg*=4; break;
-            }
-        }
-        if (Math.random() < (player.comboRate/100)) { log(`<b><span class='epic'>🌪️ 연격 2배!</span></b>`); dmg *= 2; }
-        if (currentMonster.trait === "암살" || currentMonster.trait === "기민함") { if(Math.random() < 0.2) { log(`적 회피!`); next(); return; } }
-        if (currentMonster.trait === "단단함") dmg = Math.floor(dmg * 0.8);
-
-        log(`적에게 <span class='highlight'>${dmg}</span> 피해!`); currentMonster.hp -= dmg;
-        if (currentMonster.trait === "반사") { let refDmg = Math.floor(dmg * 0.1); player.hp -= refDmg; log(`<span class='damage'>적의 가시 갑옷! (${refDmg} 반사 피해)</span>`); }
-        if (currentMonster.hp > 0 && player.hasMercenary) { let md = calcDamage(50, currentMonster.def); currentMonster.hp -= md; log(`<span class='heal'>용병 지원 (${md})</span>`); }
-        if (isRaidMode) { totalRaidDmg += dmg; log(`<span style='color:#00ffff;'>누적: ${totalRaidDmg.toLocaleString()}</span>`); next(); return; }
-        
-        if (player.hp <= 0) { player.hp = 0; gameOver(); } else if (currentMonster.hp <= 0) winCombat(); else next();
+    if (type === "run") {
+        if (isRaidMode) return log("레이드 도주 불가!");
+        if (isPvPMode) { log("<b><span style='color:#e74c3c;'>결투장에서 기권했습니다.</span></b>"); player.hp=1; isPvPMode=false; currentMonster=null; enterMapMode(); updateUI(); return; }
+        if (isArenaMode) { log("<b><span style='color:#e67e22;'>투기장 전투를 중단하고 무사히 빠져나왔습니다.</span></b>"); isArenaMode = false; currentMonster = null; currentInteractingEntity = null; loadTownMap(); updateUI(); autoSave(); return; }
+        if (Math.random() < 0.3) { log("도망 성공!"); currentMonster = null; enterMapMode(); return; } 
+        else { log("도망 실패!"); next(); return; }
     }
+
+    if (type === "heal") { 
+        player.potions--; 
+        player.hp = Math.min(player.maxHp, player.hp + 150); 
+        log(`<span class='heal'>포션 회복 (+150).</span>`); 
+        next(); 
+        return; 
+    }
+
+    let dmg = 0;
+
+    if (type === "attack") { 
+        dmg = calcDamage(player.atk, currentMonster.def); 
+        if (Math.random() < (player.critRate/100)) { 
+            dmg*=2; 
+            log(`<b><span class='highlight'>크리티컬!</span></b>`); 
+        } 
+    } 
+    else if (type === "skill") {
+        player.mp -= player.skillCost;
+        switch(player.skill) {
+            case "대지가르기": case "파이어볼": case "연속베기": case "조준사격": dmg = calcDamage(player.atk * 2.5, currentMonster.def * 0.5); break;
+            case "극발도": dmg = calcDamage(player.atk * 3.5, 0); break; 
+            case "광란": dmg = calcDamage(player.atk * 4.0, currentMonster.def); player.hp -= 20; break;
+            case "메테오": dmg = calcDamage(player.atk * 4.5, currentMonster.def); break; 
+            case "헤드샷": dmg = calcDamage(player.atk * 3.5, currentMonster.def * 0.2); break;
+            case "생명흡수": dmg = calcDamage(player.atk * 2.5, currentMonster.def); player.hp = Math.min(player.maxHp, player.hp+Math.floor(dmg*0.3)); break;
+            case "절명": dmg = calcDamage(player.atk * 2.0, currentMonster.def); if(Math.random()<0.5) dmg*=3; break;
+            case "환영분신": dmg = calcDamage(player.atk * 3.0, currentMonster.def); player.evadeRate += 10; break; 
+            case "폭풍우": dmg = calcDamage(player.atk * 3.0, currentMonster.def); break;
+            case "궁극검무": dmg = calcDamage(player.atk * 5.0, 0); break; 
+            case "피의축제": dmg = calcDamage(player.atk * 6.0, currentMonster.def); player.hp -= 50; break;
+            case "아마겟돈": dmg = calcDamage(player.atk * 7.0, currentMonster.def * 0.5); break; 
+            case "그림자참수": dmg = calcDamage(player.atk * 4.0, currentMonster.def); if(Math.random()<0.4) dmg*=4; break;
+        }
+    }
+
+    if (Math.random() < (player.comboRate/100)) { 
+        log(`<b><span class='epic'>🌪️ 연격 2배!</span></b>`); 
+        dmg *= 2; 
+    }
+
+    if (currentMonster.trait === "암살" || currentMonster.trait === "기민함") { 
+        if(Math.random() < 0.2) { 
+            log(`적 회피!`); 
+            next(); 
+            return; 
+        } 
+    }
+
+    if (currentMonster.trait === "단단함") dmg = Math.floor(dmg * 0.8);
+
+    // 🔥 데미지 적용
+    currentMonster.hp -= dmg;
+
+    // 🔥🔥🔥 핵심 수정 (여기 하나가 전부다)
+    if (isRaidMode) { 
+        raidTotalDamage += dmg; 
+        log(`<span style='color:#00ffff;'>누적: ${raidTotalDamage.toLocaleString()}</span>`); 
+    }
+
+    log(`적에게 <span class='highlight'>${dmg}</span> 피해!`);
+
+    if (currentMonster.trait === "반사") { 
+        let refDmg = Math.floor(dmg * 0.1); 
+        player.hp -= refDmg; 
+        log(`<span class='damage'>적의 가시 갑옷! (${refDmg} 반사 피해)</span>`); 
+    }
+
+    if (currentMonster.hp > 0 && player.hasMercenary) { 
+        let md = calcDamage(50, currentMonster.def); 
+        currentMonster.hp -= md; 
+        log(`<span class='heal'>용병 지원 (${md})</span>`); 
+    }
+
+    // 🔥 레이드면 여기서 종료 (적 행동 없음)
+    if (isRaidMode) { 
+        next(); 
+        return; 
+    }
+
+    // 🔻 일반 전투
+    if (player.hp <= 0) { 
+        player.hp = 0; 
+        gameOver(); 
+    } 
+    else if (currentMonster.hp <= 0) {
+        winCombat();
+    } 
+    else {
+        next();
+    }
+}
 
     function doEnemyAction(next) {
         if (Math.random() < (player.evadeRate/100)) { log(`<span class='heal'>회피 성공!</span>`); next(); return; }
@@ -1093,6 +1221,20 @@
     }
 
     function winCombat() {
+    if (isArenaMode) {
+
+        arenaTotalGold += currentMonster.gold;
+        arenaTotalExp += currentMonster.exp;
+
+        log(`<span class='heal'>✔ 처치! 누적 골드: ${arenaTotalGold}</span>`);
+
+        arenaWave++;
+
+    // 🔥 다음 몬스터 바로 생성
+        spawnArenaMonster();
+
+        return;
+       }
         if(isPvPMode) {
             log(`<hr><b><span class='epic'>결투 승리!! 보상으로 ${currentMonster.gold.toLocaleString()}G를 획득했습니다!</span></b>`);
             player.gold += currentMonster.gold; player.exp += currentMonster.exp;
@@ -1123,11 +1265,20 @@
     }
 
     function endRaid() {
-        isRaidMode = false; currentMonster = null; let rew = Math.floor(totalRaidDmg * 2.5); player.gold += rew;
-        log(`<hr><b><span class='epic'>토벌 종료!</span></b> 보상: ${rew.toLocaleString()}G`);
-        player.hp = player.maxHp; isDead = false; document.querySelectorAll("button").forEach(b => b.disabled = false);
-        loadTownMap(); updateUI(); autoSave();
-    }
+    let reward = Math.floor(raidTotalDamage / 1000);
+
+    player.gold += reward;
+
+    log(`<hr><span class='epic'>🏆 레이드 종료!</span>`);
+    log(`총 피해량: ${raidTotalDamage.toLocaleString()}`);
+    log(`보상: 💰 ${reward.toLocaleString()} 골드`);
+
+    isRaidMode = false;
+    raidTotalDamage = 0;
+
+    toggleMode("map");
+    updateUI();
+}
 
     function checkLevelUp() {
         let lvup = false;
@@ -1136,6 +1287,22 @@
     }
 
     function gameOver() { 
+    if (isArenaMode) {
+
+        log(`<hr><span class='damage'>💀 투기장 패배...</span>`);
+        log(`최종 웨이브: ${arenaWave}`);
+        log(`보상: 💰 ${arenaTotalGold} / EXP ${arenaTotalExp}`);
+
+        player.gold += arenaTotalGold;
+        player.exp += arenaTotalExp;
+
+        isArenaMode = false;
+
+        toggleMode("map");
+        updateUI();
+
+        return;
+    }
         isDead = true; currentInteractingEntity = null; log("<hr><b><span class='damage'>💀 사망...</span></b>"); 
         document.querySelectorAll("button").forEach(b => b.disabled = true); toggleMode("post-combat");
         let pc = document.getElementById("post-combat-actions"); pc.innerHTML = `<button onclick="revive()" class="awake-btn" style="width:100%; height:55px;">✨ 마을에서 부활 (골드 10% 감소)</button>`;
@@ -1155,40 +1322,50 @@
 // 1. 일반 / 보스 전투 시작 (층수에 따른 몬스터 스케일링 적용)
 function startCombat(isBoss) {
     if (isDead) return;
+
     isRaidMode = false;
     isArenaMode = false;
     isPvPMode = false;
 
-    // 몬스터 종류 랜덤 선택 (보스일 경우 층수에 맞춰 강한 몬스터 고정)
-    let monsterIndex = Math.floor(Math.random() * monsters.length);
+    // 🔥 여기 핵심 수정
+    let pool = isBoss ? bossMonsters : baseMonsters;
+
+    let monsterIndex;
     if (isBoss) {
-        monsterIndex = Math.min(monsters.length - 1, Math.floor(player.floor / 5));
+        monsterIndex = Math.min(pool.length - 1, Math.floor(player.floor / 5));
+    } else {
+        monsterIndex = Math.floor(Math.random() * pool.length);
     }
-    
-    let baseMonster = monsters[monsterIndex] || monsters[0];
-    currentMonster = JSON.parse(JSON.stringify(baseMonster)); // 원본 데이터 훼손 방지 깊은 복사
-    
-    // 현재 층(floor)에 비례하여 몬스터 능력치 대폭 강화 (스케일링)
-    let scale = 1 + (player.floor * 0.15);
+
+    let baseMonster = pool[monsterIndex];
+
+    // 🔥 몬스터 생성
+    currentMonster = JSON.parse(JSON.stringify(baseMonster));
+
+    // 🔥 스케일링
+    let scale = 1 + (player.floor * 0.25);
+
     currentMonster.hp = Math.floor(currentMonster.hp * scale);
     currentMonster.maxHp = currentMonster.hp;
     currentMonster.atk = Math.floor(currentMonster.atk * scale);
     currentMonster.def = Math.floor(currentMonster.def * scale);
     currentMonster.exp = Math.floor(currentMonster.exp * scale);
     currentMonster.gold = Math.floor(currentMonster.gold * scale);
-    
+
     if (isBoss) {
-        currentMonster.hp = Math.floor(currentMonster.hp * 2);
+        currentMonster.hp *= 2;
         currentMonster.maxHp = currentMonster.hp;
         currentMonster.atk = Math.floor(currentMonster.atk * 1.5);
-        currentMonster.name = "👑 [보스] " + currentMonster.name;
+        currentMonster.name = "👑 " + currentMonster.name;
     }
 
-    log(`<hr><b><span class='damage'>[${currentMonster.name}]</span></b>이(가) 앞을 가로막습니다! 전투를 준비하세요!`);
-    
-    // 전투 화면 UI 모드로 전환
-    toggleMode("combat"); 
-    updateCombatUI();
+    log(`<hr><span class='damage'>${currentMonster.name} 등장!</span>`);
+
+    toggleMode("combat");
+
+    // 🔥 UI 안정화 (중요)
+    activeMenuMode = 'combat';
+    updateUI();
 }
 
 // 2. 계단 진입 시 다음 층으로 이동
@@ -1209,14 +1386,17 @@ function nextFloor() {
 // 3. 투기장(무한 방어전) 입장
 function startArenaCombat() {
     if (isDead) return;
+
     isArenaMode = true;
     isRaidMode = false;
     isPvPMode = false;
     
-    let m = JSON.parse(JSON.stringify(monsters[Math.floor(Math.random() * monsters.length)]));
+    let m = JSON.parse(JSON.stringify(
+        baseMonsters[Math.floor(Math.random() * baseMonsters.length)]
+    ));
     
-    // 투기장은 일반 몬스터보다 강하지만 경험치/골드를 2배로 줌
     let scale = 2 + (Math.random() * 2);
+
     m.hp = Math.floor(m.hp * scale);
     m.maxHp = m.hp;
     m.atk = Math.floor(m.atk * scale);
@@ -1228,17 +1408,10 @@ function startArenaCombat() {
     currentMonster.name = "🏟️ [투기장] " + m.name;
     
     log(`<hr>투기장 맹수 <b><span class='damage'>${m.name}</span></b> 출현!`);
-    toggleMode("combat");
-    updateCombatUI();
-}
 
-// 버튼 클릭 시 호출되는 투기장 진입 함수
-function startArena() {
-    if (player.gold < 1000) return log("<span class='damage'>골드가 부족합니다! (1,000G 필요)</span>");
-    player.gold -= 1000;
-    log("투기장 입장료를 지불했습니다.");
+    toggleMode("combat");
+    activeMenuMode = 'combat';
     updateUI();
-    startArenaCombat();
 }
 
 // 4. 차원의 마룡 토벌전(레이드) 입장
@@ -1248,27 +1421,31 @@ function enterRaid() {
     isRaidMode = true;
     isArenaMode = false;
     isPvPMode = false;
-    
-    // 입장 시간 기록
+
+    raidTurn = 0;
+    maxRaidTurn = 10;
+    raidTotalDamage = 0; // 🔥 중요
+
     player.lastRaidTime = Date.now();
     autoSave();
-    
-    // 압도적인 체력과 방어력 무시 기믹(플레이어 최대 체력 비례 데미지)을 가진 레이드 보스
+
     currentMonster = {
         name: "🐉 차원의 마룡",
         hp: 999999999,
         maxHp: 999999999,
-        atk: Math.floor(player.maxHp * 0.3), // 무조건 최대 체력의 30%를 깎음
+        atk: 0,
         def: player.atk * 0.8,
-        exp: 50000,
-        gold: 50000,
-        speed: 150,
+        exp: 0,
+        gold: 0,
+        speed: 0,
         trait: "파멸"
     };
 
-    log(`<hr><span class='epic'>하늘이 찢어지며 <b>차원의 마룡</b>이 강림했습니다! 최대한 버텨내세요!</span>`);
+    log(`<hr><span class='epic'>🐉 차원의 마룡 등장! 10턴 동안 최대한 많은 피해를 입혀라!</span>`);
+
     toggleMode("combat");
-    updateCombatUI();
+    activeMenuMode = 'combat';
+    updateUI();
 }
 
 // 5. 레이드 쿨타임(5분) 검사 로직
