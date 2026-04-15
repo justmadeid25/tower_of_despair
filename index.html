@@ -908,7 +908,7 @@
         ruinsState.clicksLeft--; let cell = ruinsState.grid[index]; cell.revealed = true;
         if(cell.type === 'soul') { player.soulStones++; log("<b><span class='epic'>[유적 발굴] 영혼석을 발견했습니다!!</span></b>"); }
         else if(cell.type === 'enhance') { player.inventory["강화석"] = (player.inventory["강화석"]||0)+1; log("<span class='highlight'>[유적 발굴] 강화석을 캐냈습니다!</span>"); }
-        else if(cell.type === 'gold') { player.gold += 3000000; log("<b><span style='color:#f1c40f;'>[유적 발굴] 3,000G가 든 돈자루를 찾았습니다!</span></b>"); }
+        else if(cell.type === 'gold') { player.gold += 2000; log("<b><span style='color:#f1c40f;'>[유적 발굴] 2,000G가 든 돈자루를 찾았습니다!</span></b>"); }
         else if(cell.type === 'card') { 
             let allMonsters = [...baseMonsters, ...bossMonsters]; let randMob = allMonsters[Math.floor(Math.random() * allMonsters.length)].name;
             log(`<b><span style='color:#00ffff;'>[유적 발굴] 땅 속에서 오래된 카드를 발견했습니다!</span></b>`); dropCard(randMob);
